@@ -1,0 +1,239 @@
+/* ================= CONTAINER ================= */
+
+.lessons-container{
+padding:40px 20px;
+min-height:100vh;
+background:black;
+}
+
+/* ================= TITLE ================= */
+
+.lessons-title{
+
+text-align:center;
+
+font-size:34px;
+
+color:#ffd700;
+
+margin-top:20px;
+
+margin-bottom:30px;
+
+font-weight:bold;
+
+}
+
+/* ================= BACK BUTTON ================= */
+
+.back-btn{
+
+position:absolute;
+
+right:30px;
+
+top:20px;
+
+background:#ffd700;
+
+border:none;
+
+color:black;
+
+font-weight:bold;
+
+padding:10px 20px;
+
+border-radius:8px;
+
+cursor:pointer;
+
+}
+
+.back-btn:hover{
+
+opacity:.9;
+
+}
+
+/* ================= ADD LESSON BUTTON ================= */
+
+.add-btn{
+
+background:linear-gradient(135deg,#ffd700,#ffcc00,#d4af37);
+
+color:#000;
+
+font-weight:bold;
+
+padding:12px 28px;
+
+border-radius:30px;
+
+border:2px solid #ffd700;
+
+cursor:pointer;
+
+font-size:16px;
+
+margin:20px auto;
+
+display:block;
+
+box-shadow:0 0 15px rgba(255,215,0,0.7);
+
+transition:.25s;
+
+}
+
+.add-btn:hover{
+
+transform:scale(1.07);
+
+box-shadow:0 0 25px rgba(255,215,0,1);
+
+}
+
+/* ================= GRID ================= */
+
+.lessons-grid{
+
+display:grid;
+
+grid-template-columns:repeat(auto-fit,minmax(320px,1fr));
+
+gap:35px;
+
+max-width:1100px;
+
+margin:40px auto;
+
+padding:0 20px;
+
+}
+
+/* ================= LESSON CARD ================= */
+
+.lesson-card{
+
+background:#000;
+
+border:2px solid #ffd700;
+
+border-radius:18px;
+
+padding:40px 20px;
+
+text-align:center;
+
+box-shadow:0 0 12px rgba(255,215,0,.4);
+
+transition:.25s;
+
+}
+
+.lesson-card:hover{
+
+transform:scale(1.05);
+
+box-shadow:0 0 25px rgba(255,215,0,.9);
+
+}
+
+/* ================= LESSON NUMBER ================= */
+
+.lesson-index-circle{
+
+width:46px;
+
+height:46px;
+
+background:#ffd700;
+
+color:black;
+
+border-radius:50%;
+
+display:flex;
+
+align-items:center;
+
+justify-content:center;
+
+font-weight:bold;
+
+font-size:16px;
+
+margin:0 auto 15px auto;
+
+}
+
+/* ================= LESSON TITLE ================= */
+
+.lesson-title{
+
+color:#ffd700;
+
+font-size:22px;
+
+margin-bottom:15px;
+
+font-weight:bold;
+
+}
+
+/* ================= LESSON ACTIONS ================= */
+
+.lesson-actions{
+
+display:flex;
+
+flex-direction:column;
+
+align-items:center;
+
+}
+
+/* ================= START BUTTON ================= */
+
+.lesson-start-btn{
+
+background:black;
+
+color:#ffd700;
+
+border:2px solid #ffd700;
+
+padding:10px 24px;
+
+border-radius:25px;
+
+cursor:pointer;
+
+font-weight:bold;
+
+transition:.25s;
+
+}
+
+.lesson-start-btn:hover{
+
+background:#ffd700;
+
+color:black;
+
+}
+
+/* ================= EMPTY ================= */
+
+.lessons-empty{
+
+text-align:center;
+
+color:#aaa;
+
+margin-top:60px;
+
+font-size:18px;
+
+}

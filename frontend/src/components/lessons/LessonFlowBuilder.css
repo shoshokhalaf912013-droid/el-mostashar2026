@@ -1,0 +1,75 @@
+.flow-builder-card {
+  background: linear-gradient(135deg, #1e1e1e, #2b2b2b);
+  border: 1px solid #d4af37;
+  border-radius: 18px;
+  padding: 20px;
+  color: #fff;
+  box-shadow: 0 0 25px rgba(212, 175, 55, 0.15);
+}
+
+.flow-title {
+  margin-bottom: 16px;
+  color: #d4af37;
+}
+
+.flow-items {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.flow-item {
+  display: flex;
+  gap: 12px;
+  background: #111;
+  border-radius: 12px;
+  padding: 12px;
+  border: 1px solid #333;
+}
+
+.flow-order {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: #d4af37;
+  color: #000;
+  font-weight: bold;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flow-body {
+  flex: 1;
+}
+
+.flow-type {
+  font-size: 12px;
+  color: #d4af37;
+}
+
+.flow-placeholder {
+  margin-top: 6px;
+  font-size: 14px;
+  opacity: 0.8;
+}
+
+.flow-actions {
+  margin-top: 16px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.flow-add-btn {
+  background: transparent;
+  border: 1px dashed #d4af37;
+  color: #d4af37;
+  padding: 6px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.flow-add-btn:hover {
+  background: rgba(212, 175, 55, 0.1);
+}

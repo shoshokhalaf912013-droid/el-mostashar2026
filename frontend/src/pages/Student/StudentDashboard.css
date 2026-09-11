@@ -1,0 +1,47 @@
+.student-dashboard {
+  min-height: 100vh;
+  background: #000;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* ===== قسم المعلم ===== */
+.teacher-section {
+  text-align: center;
+}
+
+/* صورة المعلم */
+.teacher-image {
+  width: 420px;
+  max-width: 90%;
+  border-radius: 18px;
+  border: 2px solid #d4af37;
+  box-shadow: 0 0 25px rgba(212, 175, 55, 0.25);
+}
+
+/* ===== الترحيب الذهبي ===== */
+.gold-welcome {
+  margin-top: 25px;
+  font-size: 34px;
+  font-weight: bold;
+
+  /* اللون الذهبي */
+  color: #d4af37;
+
+  /* تأثير العلامة المائية */
+  opacity: 0.85;
+  letter-spacing: 1px;
+
+  /* توهج خفيف */
+  text-shadow:
+    0 0 6px rgba(212, 175, 55, 0.6),
+    0 0 12px rgba(212, 175, 55, 0.3);
+
+  transition: 0.3s;
+}
+
+.gold-welcome:hover {
+  opacity: 1;
+  transform: scale(1.03);
+}

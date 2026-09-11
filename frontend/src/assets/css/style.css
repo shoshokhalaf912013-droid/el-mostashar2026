@@ -1,0 +1,53 @@
+/* ===========================
+   PAGE LAYOUT FIX (Enhanced)
+   =========================== */
+
+.page-container {
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+.items-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+  align-items: start;
+}
+
+.items-grid img {
+  width: 100%;
+  border-radius: 12px;
+  display: block;
+  object-fit: cover;
+  transition: 0.3s ease;
+}
+
+.items-grid img:hover {
+  transform: scale(1.03);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.15);
+}
+
+.item-box {
+  background: #fff;
+  padding: 1rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+  transition: 0.3s ease;
+}
+
+.item-box:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 20px rgba(0,0,0,0.12);
+}
+
+@media (prefers-color-scheme: dark) {
+  .item-box {
+    background: #1c1c1c;
+    box-shadow: 0 4px 12px rgba(255,255,255,0.05);
+  }
+  .item-box:hover {
+    box-shadow: 0 8px 20px rgba(255,255,255,0.08);
+  }
+}

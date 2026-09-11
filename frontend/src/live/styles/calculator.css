@@ -1,0 +1,107 @@
+/* WRAPPER */
+.calculatorWrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 9999999;
+  pointer-events: none;
+}
+
+/* CALCULATOR */
+.calculatorWrapper .calculator {
+  position: absolute;
+  width: 260px;
+  background: #000814;
+  border: 2px solid gold;
+  border-radius: 14px;
+  padding: 10px;
+  box-shadow: 0 0 25px gold;
+  color: gold;
+  pointer-events: auto;
+  font-family: monospace;
+}
+
+/* DRAG */
+.dragbar {
+  background: #111c44;
+  color: gold;
+  padding: 6px;
+  border-radius: 6px;
+  cursor: move;
+  text-align: center;
+  font-weight: bold;
+}
+
+/* SCREEN */
+.screen {
+  width: 100%;
+  height: 36px;
+  margin: 8px 0;
+  background: black;
+  color: #00ffcc;
+  border: none;
+  padding: 5px;
+}
+
+/* TABS */
+.tabs {
+  display: flex;
+  gap: 4px;
+}
+
+.tabs button {
+  flex: 1;
+  background: #0b0f2a;
+  color: gold;
+  border: 1px solid gold;
+}
+
+/* GRID */
+.calcGrid {
+  display: grid;
+  grid-template-columns: repeat(4,1fr);
+  gap: 4px;
+  margin-top: 6px;
+}
+
+.calcGrid button {
+  background: #0b0f2a;
+  color: gold;
+  border: 1px solid gold;
+  padding: 8px;
+}
+
+/* TOOLS */
+.tools {
+  margin-top: 6px;
+  display: flex;
+  gap: 4px;
+}
+
+.tools button {
+  flex: 1;
+  background: #1b1f4a;
+  color: gold;
+  border: 1px solid gold;
+}
+
+/* MATRIX */
+.matrix-grid {
+  display: grid;
+  grid-template-columns: repeat(3,1fr);
+  gap: 4px;
+}
+
+.matrix-grid input {
+  background: black;
+  color: white;
+  border: 1px solid gold;
+  text-align: center;
+}
+
+/* GRAPH */
+#graphCanvas {
+  background: black;
+  border: 1px solid gold;
+  margin-top: 6px;
+}

@@ -1,0 +1,86 @@
+.exam-container {
+  background: #0d0d0d;
+  color: white;
+  padding: 30px;
+  border-radius: 20px;
+  box-shadow: 0 0 20px #000;
+  width: 90%;
+  margin: auto;
+  margin-top: 25px;
+  direction: rtl;
+  text-align: right;
+}
+
+.exam-title {
+  font-size: 28px;
+  color: #d4af37;
+  margin-bottom: 10px;
+}
+
+.exam-desc {
+  font-size: 16px;
+  color: #bbb;
+  margin-bottom: 25px;
+}
+
+.exam-question-box {
+  background: #111;
+  padding: 20px;
+  border-radius: 15px;
+  margin-bottom: 20px;
+  border: 1px solid #222;
+}
+
+.exam-question {
+  font-size: 20px;
+  color: #fff;
+  margin-bottom: 15px;
+}
+
+.exam-choices {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.exam-choice {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: 0.3s;
+  border: 1px solid transparent;
+}
+
+.exam-choice:hover {
+  background: #1a1a1a;
+  border-color: #d4af37;
+}
+
+.exam-submit-btn {
+  background: black;
+  color: white;
+  padding: 12px 25px;
+  border-radius: 10px;
+  margin-top: 15px;
+  font-size: 18px;
+  border: 1px solid #d4af37;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.exam-submit-btn:hover {
+  background: #d4af37;
+  color: black;
+}
+
+.exam-result-box {
+  padding: 30px;
+  background: #111;
+  border-radius: 15px;
+  text-align: center;
+  border: 1px solid #333;
+  color: #d4af37;
+}

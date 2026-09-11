@@ -1,0 +1,108 @@
+.flow-container {
+  background: #0d0d0d;
+  padding: 25px;
+  border-radius: 22px;
+  color: white;
+  width: 92%;
+  margin: 25px auto;
+  direction: rtl;
+}
+
+.flow-title {
+  text-align: center;
+  font-size: 28px;
+  font-weight: bold;
+  color: #d4af37;
+  margin-bottom: 20px;
+}
+
+.flow-box {
+  background: #111;
+  padding: 25px;
+  border-radius: 20px;
+  border: 1px solid #222;
+}
+
+.flow-subtitle {
+  font-size: 22px;
+  color: #d4af37;
+  margin-bottom: 18px;
+}
+
+.flow-text {
+  font-size: 16px;
+  color: #ccc;
+  margin-bottom: 15px;
+}
+
+.video-box video {
+  width: 100%;
+  border-radius: 14px;
+  margin-bottom: 20px;
+}
+
+.flow-homework-list {
+  list-style: none;
+  padding: 0;
+}
+
+.flow-homework-list li {
+  background: #1a1a1a;
+  margin-bottom: 10px;
+  padding: 10px;
+  border-radius: 8px;
+  border: 1px solid #222;
+}
+
+.flow-file {
+  width: 100%;
+  background: #1a1a1a;
+  padding: 12px;
+  border: 1px solid #333;
+  border-radius: 10px;
+  margin-bottom: 20px;
+  color: white;
+}
+
+.flow-btn {
+  width: 100%;
+  padding: 14px;
+  border-radius: 12px;
+  font-size: 18px;
+  margin-top: 15px;
+  cursor: pointer;
+  border: 1px solid #d4af37;
+  transition: 0.3s;
+}
+
+.gold-btn {
+  background: #d4af37;
+  color: black;
+}
+
+.gold-btn:hover {
+  background: black;
+  color: #d4af37;
+}
+
+.black-btn {
+  background: black;
+  color: white;
+}
+
+.black-btn:hover {
+  background: #d4af37;
+  color: black;
+}
+
+.report-mini-box {
+  background: #1a1a1a;
+  padding: 15px;
+  border: 1px solid #333;
+  border-radius: 12px;
+  margin-bottom: 20px;
+}
+
+.gold {
+  color: #d4af37;
+}

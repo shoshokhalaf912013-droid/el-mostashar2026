@@ -1,0 +1,206 @@
+/* ==========================
+   Tailwind
+   ========================== */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ==========================
+   إعدادات الصفحة العامة
+   ========================== */
+body {
+  font-family: "Tajawal", sans-serif;
+  background-color: #0A0A0A;
+  color: #fff;
+  margin: 0;
+  padding: 0;
+  overflow-x: hidden;
+}
+
+/* يعطي مسافة تحت النافبار لجميع الصفحات */
+.page-container {
+  padding-top: 90px !important;
+}
+
+/* ==========================
+   Navbar
+   ========================== */
+.navbar {
+  width: 100%;
+  padding: 15px 25px;
+  background: #000;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 2000;
+  border-bottom: 1px solid #D4AF37;
+  direction: rtl;
+}
+
+.nav-links {
+  display: flex;
+  gap: 25px;
+  list-style: none;
+}
+
+.nav-links li a {
+  color: white;
+  font-weight: bold;
+  text-decoration: none;
+}
+
+.nav-links li a:hover {
+  color: #D4AF37;
+}
+
+.text-gold {
+  color: #D4AF37;
+}
+
+.superadmin-btn {
+  background: #D4AF37;
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-weight: bold;
+  color: black !important;
+}
+
+/* زر ذهبي */
+.btn-gold {
+  background: linear-gradient(90deg, #D4AF37, #F7D97C);
+  padding: 7px 12px;
+  border-radius: 8px;
+  font-weight: bold;
+  color: black !important;
+}
+
+.border-gold {
+  border-color: #D4AF37 !important;
+}
+
+/* ==========================
+   Login Page
+   ========================== */
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.login-box {
+  background: #000;
+  border: 2px solid #D4AF37;
+  padding: 25px;
+  width: 350px;
+  border-radius: 12px;
+  text-align: center;
+}
+
+.login-box h2 {
+  color: #D4AF37;
+  margin-bottom: 20px;
+}
+
+.login-box input {
+  width: 100%;
+  margin: 10px 0;
+  padding: 12px;
+  border-radius: 6px;
+  outline: none;
+  border: 1px solid #444;
+  background: #111;
+  color: white;
+}
+
+.login-box input::placeholder {
+  color: #bbb;
+}
+
+.login-box button {
+  width: 100%;
+  background: linear-gradient(90deg, #D4AF37, #F7D97C);
+  padding: 12px;
+  border-radius: 6px;
+  margin-top: 10px;
+  font-weight: bold;
+  color: black;
+}
+
+.error {
+  margin-top: 10px;
+  color: #ff6b6b;
+  font-size: 14px;
+}
+
+/* ==========================
+   Home Page Layout
+   ========================== */
+.home-wrapper {
+  padding-top: 50px;
+}
+
+/* ==========================
+   Subjects (المواد الدراسية)
+   ========================== */
+
+/* شبكة المواد */
+.subjects-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 22px;
+  margin-top: 20px;
+  width: 100%;
+}
+
+/* كارت المادة */
+.subject-card {
+  background: linear-gradient(135deg, #000000, #111111);
+  border: 1.5px solid #D4AF37;
+  border-radius: 18px;
+  padding: 24px 16px;
+  text-align: center;
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 90px;
+  width: 100%;
+
+  transition:
+    transform 0.45s ease,
+    box-shadow 0.45s ease,
+    background 0.45s ease;
+}
+
+/* اسم المادة */
+.subject-card h4 {
+  color: #D4AF37;
+  font-size: 18px;
+  font-weight: bold;
+  margin: 0;
+  line-height: 1.6;
+}
+
+/* Hover فخم وبطيء */
+.subject-card:hover {
+  transform: translateY(-6px) scale(1.05);
+  box-shadow: 0 15px 35px rgba(212, 175, 55, 0.4);
+  background: linear-gradient(135deg, #0a0a0a, #1a1a1a);
+}
+
+/* ==========================
+   Footer
+   ========================== */
+footer {
+  padding: 1rem;
+  border-top: 1px solid #D4AF37 !important;
+  background: #000;
+  text-align: center;
+  color: #ccc;
+}

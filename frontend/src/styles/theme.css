@@ -1,0 +1,104 @@
+/* ===== Super Admin Gold Cards ===== */
+
+.gold-text {
+  color: var(--gold);
+}
+
+.gold-border {
+  border-color: var(--gold);
+}
+
+.gold-glow {
+  box-shadow: 0 0 18px rgba(212, 175, 55, 0.35);
+}
+
+/* بطاقة صلاحيات */
+.gold-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 24px;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.35s ease;
+}
+
+/* Hover احترافي */
+.gold-card:hover {
+  background: var(--gold);
+  color: #000;
+  transform: translateY(-6px) scale(1.02);
+  box-shadow: 0 0 32px rgba(212, 175, 55, 0.7);
+}
+
+/* الأيقونة داخل البطاقة */
+.gold-card:hover svg,
+.gold-card:hover span,
+.gold-card:hover p {
+  color: #000;
+}
+/* ===================================================
+   ⭐ GOLD NAME CELEBRATION (ISOLATED LAYER)
+   =================================================== */
+
+.name-celebration-layer {
+  position: relative;
+  z-index: 9999; /* أعلى من كل الثيم */
+  isolation: isolate; /* يمنع تأثير CSS الخارجى */
+}
+
+/* الحروف */
+.name-letter {
+  position: relative;
+  display: inline-block;
+}
+
+/* الشرارة الذهبية */
+.gold-spark {
+  position: absolute;
+  width: 6px;
+  height: 6px;
+  background: radial-gradient(circle, gold, transparent);
+  border-radius: 50%;
+  top: -6px;
+  left: 50%;
+  pointer-events: none;
+  animation: sparkFly 1.4s ease-out infinite;
+  filter: drop-shadow(0 0 6px gold);
+}
+
+@keyframes sparkFly {
+  0% {
+    opacity: 1;
+    transform: translate(-50%, 0) scale(1);
+  }
+  100% {
+    opacity: 0;
+    transform: translate(
+      calc(-50% + var(--x)),
+      -70px
+    ) scale(0.2);
+  }
+}
+
+/* الأفاتارات الذهبية */
+.gold-avatar {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: radial-gradient(circle, gold, transparent);
+  border-radius: 50%;
+  animation: avatarFloat 5s linear infinite;
+  pointer-events: none;
+}
+
+@keyframes avatarFloat {
+  from {
+    transform: translateY(30px);
+    opacity: 1;
+  }
+  to {
+    transform: translateY(-140px);
+    opacity: 0;
+  }
+}

@@ -1,0 +1,208 @@
+.lessons-container{
+
+padding:40px 20px;
+min-height:100vh;
+background:black;
+
+display:flex;
+flex-direction:column;
+align-items:center;
+
+}
+
+/* العنوان */
+
+.lessons-title{
+
+font-size:34px;
+color:#ffd700;
+
+margin:20px 0 30px;
+
+font-weight:bold;
+
+}
+
+/* زر الرجوع */
+
+.back-btn{
+
+position:fixed;
+
+right:30px;
+top:20px;
+
+background:#ffd700;
+
+border:none;
+
+color:black;
+
+font-weight:bold;
+
+padding:10px 20px;
+
+border-radius:8px;
+
+cursor:pointer;
+
+}
+
+/* زر إضافة درس */
+
+.add-btn{
+
+background:linear-gradient(135deg,#ffd700,#ffcc00,#d4af37);
+
+color:#000;
+
+font-weight:bold;
+
+padding:12px 28px;
+
+border-radius:30px;
+
+border:2px solid #ffd700;
+
+cursor:pointer;
+
+font-size:16px;
+
+margin-bottom:40px;
+
+}
+
+/* شبكة الدروس */
+
+.lessons-grid{
+
+display:grid;
+
+grid-template-columns:repeat(auto-fit,minmax(280px,1fr));
+
+gap:30px;
+
+width:100%;
+max-width:1100px;
+
+}
+
+/* الكارت */
+
+.lesson-card{
+
+background:#000;
+
+border:2px solid #ffd700;
+
+border-radius:18px;
+
+padding:30px 20px;
+
+text-align:center;
+
+box-shadow:0 0 12px rgba(255,215,0,.4);
+
+transition:.25s;
+
+}
+
+.lesson-card:hover{
+
+transform:scale(1.05);
+
+box-shadow:0 0 25px rgba(255,215,0,.9);
+
+}
+
+/* رقم الدرس */
+
+.lesson-index-circle{
+
+width:46px;
+height:46px;
+
+background:#ffd700;
+
+color:black;
+
+border-radius:50%;
+
+display:flex;
+
+align-items:center;
+justify-content:center;
+
+font-weight:bold;
+
+font-size:16px;
+
+margin:0 auto 15px;
+
+}
+
+/* عنوان الدرس */
+
+.lesson-title{
+
+color:#ffd700;
+
+font-size:22px;
+
+margin-bottom:15px;
+
+font-weight:bold;
+
+}
+
+/* الأزرار */
+
+.lesson-actions{
+
+display:flex;
+flex-direction:column;
+
+align-items:center;
+gap:10px;
+
+}
+
+/* زر بدء الدرس */
+
+.lesson-start-btn{
+
+background:black;
+
+color:#ffd700;
+
+border:2px solid #ffd700;
+
+padding:10px 24px;
+
+border-radius:25px;
+
+cursor:pointer;
+
+font-weight:bold;
+
+}
+
+/* زر الحذف */
+
+.lesson-delete-btn{
+
+background:#b80000;
+
+color:white;
+
+border:none;
+
+padding:10px 24px;
+
+border-radius:25px;
+
+cursor:pointer;
+
+font-weight:bold;
+
+}

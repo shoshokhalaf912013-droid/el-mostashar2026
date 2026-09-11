@@ -1,0 +1,17 @@
+.add-unit-btn {
+  background: linear-gradient(90deg, #ffcc00, #ffd700, #ffcc00);
+  color: black; /* مهم */
+  padding: 14px 26px;
+  border-radius: 14px;
+  border: none;
+  font-weight: bold;
+  font-size: 16px;
+  cursor: pointer;
+  box-shadow: 0 0 25px rgba(255,215,0,0.6);
+  transition: 0.3s;
+}
+
+.add-unit-btn:hover {
+  transform: scale(1.06);
+  box-shadow: 0 0 45px rgba(255,215,0,0.9);
+}

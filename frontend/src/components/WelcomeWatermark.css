@@ -1,0 +1,38 @@
+/* ===== العلامة المائية ===== */
+
+.welcome-watermark {
+  position: fixed;
+
+  /* تحت صورة المعلم تقريباً */
+  bottom: 60px;
+  left: 50%;
+  transform: translateX(-50%);
+
+  font-size: 42px;
+  font-weight: bold;
+
+  /* اللون الذهبي الحقيقي */
+  color: #d4af37;
+
+  /* تأثير العلامة المائية */
+  opacity: 0.15;
+  pointer-events: none;
+  user-select: none;
+
+  letter-spacing: 2px;
+
+  /* توهج ذهبي خفيف */
+  text-shadow:
+    0 0 10px rgba(212, 175, 55, 0.7),
+    0 0 25px rgba(212, 175, 55, 0.3);
+
+  z-index: 0;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .welcome-watermark {
+    font-size: 26px;
+    bottom: 40px;
+  }
+}

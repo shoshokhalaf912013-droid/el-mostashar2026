@@ -1,0 +1,108 @@
+.lesson-container{
+
+position:relative;
+height:800px;
+background:#020617;
+padding:20px;
+
+}
+
+/* صندوق الفيديو */
+
+.video-box{
+
+background:#000;
+border:2px solid gold;
+border-radius:12px;
+
+box-shadow:
+0 0 10px gold,
+0 0 20px rgba(255,215,0,0.4);
+
+padding:6px;
+
+}
+
+.lesson-video{
+
+width:100%;
+height:100%;
+border-radius:10px;
+
+}
+
+/* لوحة الأدوات */
+
+.tools-panel{
+
+background:#020617;
+
+border:2px solid gold;
+
+border-radius:12px;
+
+padding:10px;
+
+box-shadow:
+0 0 12px gold,
+inset 0 0 10px rgba(255,215,0,0.3);
+
+display:flex;
+flex-direction:column;
+gap:10px;
+
+}
+
+/* عنوان الأدوات */
+
+.tools-title{
+
+color:gold;
+
+font-weight:bold;
+
+text-align:center;
+
+margin-bottom:5px;
+
+}
+
+/* الأزرار الذهبية */
+
+.gold-btn{
+
+background:linear-gradient(145deg,#cfae2b,#ffd700);
+
+color:#000;
+
+border:none;
+
+padding:10px;
+
+border-radius:8px;
+
+cursor:pointer;
+
+font-weight:bold;
+
+transition:0.3s;
+
+}
+
+.gold-btn:hover{
+
+box-shadow:
+0 0 6px gold,
+0 0 15px gold,
+0 0 25px gold;
+
+transform:translateY(-2px);
+
+}
+
+.gold-btn:active{
+
+transform:scale(0.95);
+
+}
+

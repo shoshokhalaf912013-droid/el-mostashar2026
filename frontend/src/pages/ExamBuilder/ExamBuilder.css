@@ -1,0 +1,29 @@
+.exam-builder{
+background:#000;
+min-height:100vh;
+color:white;
+padding:40px;
+font-family:Cairo
+}
+
+.exam-builder h1{
+color:gold;
+margin-bottom:30px
+}
+
+.back-btn{
+background:gold;
+border:none;
+padding:10px 20px;
+border-radius:10px;
+cursor:pointer;
+margin-bottom:30px
+}
+
+.exam-workspace{
+border:2px solid gold;
+border-radius:20px;
+padding:40px;
+min-height:400px;
+box-shadow:0 0 20px gold;
+}

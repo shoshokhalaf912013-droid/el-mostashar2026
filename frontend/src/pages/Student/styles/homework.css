@@ -1,0 +1,72 @@
+/* src/pages/Student/styles/homework.css */
+
+.hw-container {
+  direction: rtl;
+  max-width: 700px;
+  margin: 40px auto;
+  background: #0d0d0d;
+  padding: 30px;
+  border-radius: 16px;
+  box-shadow: 0 0 25px #00000070;
+  border: 1px solid #222;
+}
+
+.hw-title {
+  text-align: center;
+  font-size: 28px;
+  margin-bottom: 30px;
+  color: #f1c40f;
+  font-weight: bold;
+}
+
+.hw-card {
+  background: #111;
+  padding: 20px;
+  margin-bottom: 20px;
+  border-radius: 14px;
+  border: 1px solid #333;
+  transition: 0.3s;
+}
+
+.hw-card:hover {
+  border-color: #f1c40f;
+  transform: scale(1.02);
+}
+
+.hw-card-title {
+  font-size: 22px;
+  color: #f1c40f;
+  margin-bottom: 10px;
+}
+
+.hw-card-desc {
+  font-size: 16px;
+  color: #ddd;
+  margin-bottom: 15px;
+}
+
+.hw-btn {
+  width: 100%;
+  padding: 14px;
+  border: none;
+  background: #333;
+  color: #f1c40f;
+  font-size: 18px;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.hw-btn:hover {
+  background: #f1c40f;
+  color: #000;
+}
+
+.hw-done {
+  padding: 10px;
+  background: #0f0;
+  color: #000;
+  border-radius: 8px;
+  font-weight: bold;
+  text-align: center;
+}

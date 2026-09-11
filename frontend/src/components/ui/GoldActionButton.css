@@ -1,0 +1,40 @@
+.gold-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 26px;
+  border-radius: 12px;
+  font-size: 15px;
+  font-weight: 600;
+  color: #1a1a1a;
+  background: linear-gradient(
+    135deg,
+    #f7d774,
+    #e6b93c,
+    #d4a017
+  );
+  border: 1px solid #f1c232;
+  cursor: pointer;
+
+  box-shadow:
+    0 0 14px rgba(255, 215, 0, 0.35),
+    inset 0 0 6px rgba(255, 255, 255, 0.35);
+
+  transition: all 0.25s ease;
+}
+
+.gold-action-btn:hover {
+  transform: translateY(-1px);
+  box-shadow:
+    0 0 20px rgba(255, 215, 0, 0.55),
+    inset 0 0 8px rgba(255, 255, 255, 0.45);
+}
+
+.gold-action-btn:active {
+  transform: scale(0.97);
+}
+
+.gold-action-icon {
+  font-size: 18px;
+  line-height: 1;
+}

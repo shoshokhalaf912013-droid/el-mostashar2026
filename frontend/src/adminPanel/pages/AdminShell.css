@@ -1,0 +1,44 @@
+.admin-shell {
+  height: 100vh;
+  background: #000;
+  color: #d4af37;
+  display: flex;
+  flex-direction: column;
+  font-family: sans-serif;
+}
+
+.admin-header {
+  padding: 16px;
+  border-bottom: 1px solid #333;
+}
+
+.admin-body {
+  flex: 1;
+  display: flex;
+}
+
+.admin-column {
+  width: 300px;
+  padding: 16px;
+  border-right: 1px solid #333;
+}
+
+.admin-column h3 {
+  margin-bottom: 12px;
+}
+
+.admin-column button {
+  display: block;
+  width: 100%;
+  margin-bottom: 8px;
+  padding: 10px;
+  background: transparent;
+  border: 1px solid #d4af37;
+  color: #d4af37;
+  cursor: pointer;
+}
+
+.admin-column button:hover {
+  background: #d4af37;
+  color: #000;
+}

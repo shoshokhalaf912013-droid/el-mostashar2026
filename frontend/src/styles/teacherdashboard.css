@@ -1,0 +1,67 @@
+/* ===============================
+   GOLD DASHBOARD CARDS
+================================ */
+
+.goldcard {
+  background: #0b0b0b;
+  border-radius: 18px;
+  padding: 24px;
+  cursor: pointer;
+  transition: all 0.35s ease;
+  border: 1px solid rgba(59, 130, 246, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+/* hover */
+.goldcard:hover {
+  transform: translateY(-6px);
+  border-color: #3b82f6;
+  box-shadow: 0 10px 25px rgba(0,0,0,0.6);
+}
+
+/* LIVE ACTIVE STATE */
+.goldcard.liveactive {
+  border: 1px solid gold;
+  box-shadow:
+    0 0 12px rgba(255,215,0,0.6),
+    0 0 30px rgba(255,215,0,0.3);
+  transform: scale(1.03);
+}
+
+/* GOLD TITLE */
+.goldtitle {
+  font-size: 20px;
+  font-weight: bold;
+  color: #93c5fd;
+  margin-bottom: 8px;
+}
+
+.goldcard.liveactive .goldtitle {
+  color: gold;
+}
+
+/* DESCRIPTION */
+.golddesc {
+  color: #d1d5db;
+  font-size: 14px;
+}
+
+/* LIVE BADGE */
+.livebadge {
+  background: gold;
+  color: black;
+  font-size: 12px;
+  font-weight: bold;
+  padding: 4px 10px;
+  border-radius: 999px;
+  display: inline-block;
+  margin-bottom: 10px;
+  animation: livepulse 1.2s infinite;
+}
+
+@keyframes livepulse {
+  0% { opacity: .6; }
+  50% { opacity: 1; }
+  100% { opacity: .6; }
+}

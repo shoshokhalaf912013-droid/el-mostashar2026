@@ -1,0 +1,28 @@
+/* ===== Accessibility Mode (Low Vision) ===== */
+
+body.accessibility {
+  font-size: 18px;
+}
+
+/* Units */
+body.accessibility .unit-card {
+  font-size: 26px;
+  font-weight: 800;
+  background: linear-gradient(135deg, #f0c84b, #fff1a8);
+  border: 3px solid #9c7a10;
+}
+
+body.accessibility .unit-card:hover {
+  box-shadow: 0 0 0 4px rgba(156, 122, 16, 0.5);
+}
+
+body.accessibility .unit-main-btn {
+  font-size: 26px;
+  color: #000;
+}
+
+/* Buttons */
+body.accessibility button {
+  font-size: 22px;
+  padding: 14px 20px;
+}

@@ -1,0 +1,379 @@
+/* الكارد الرئيسي */
+.unit-card {
+  width: 420px;
+  margin: 30px auto;
+  padding: 28px;
+  border-radius: 22px;
+  border: 2px solid gold;
+  background: #050505;
+  color: gold;
+  position: relative;
+  box-shadow: 0 0 30px rgba(255,215,0,0.35);
+  cursor: pointer;
+  transition: 0.3s;
+}
+
+.unit-card:hover {
+  box-shadow: 0 0 60px rgba(255,215,0,0.7);
+  transform: scale(1.01);
+}
+
+/* تعطيل الوحدة */
+.unit-disabled {
+  opacity: 0.25;
+  filter: grayscale(1);
+}
+
+/* Badge UNIT */
+.unit-badge {
+  position: absolute;
+  top: -14px;
+  left: 20px;
+  background: black;
+  padding: 4px 14px;
+  border-radius: 12px;
+  border: 2px solid gold;
+  font-weight: bold;
+  overflow: hidden;
+}
+
+/* لمعة ذهبية */
+.unit-shine {
+  position: absolute;
+  top: 0;
+  left: -150%;
+  width: 300%;
+  height: 100%;
+  background: linear-gradient(
+    120deg,
+    transparent,
+    rgba(255,215,0,0.6),
+    transparent
+  );
+  animation: shine 7s infinite linear;
+}
+
+@keyframes shine {
+  0% { left: -150%; }
+  100% { left: 150%; }
+}
+
+/* عنوان الوحدة */
+.unit-title {
+  background: linear-gradient(90deg,#b88a1c,#ffd700,#b88a1c);
+  color: black;
+  padding: 14px;
+  text-align: center;
+  font-size: 20px;
+  border-radius: 14px;
+  font-weight: bold;
+  margin-top: 10px;
+}
+
+/* ⚙️ الترس */
+.unit-gear {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-size: 18px;
+  color: gold;
+  cursor: pointer;
+  opacity: 0.25;
+  transition: 0.4s;
+}
+
+.unit-gear:hover {
+  opacity: 1;
+  transform: rotate(120deg);
+}
+
+/* لوحة الإدارة داخل الكارد */
+.admin-menu {
+  display: flex;
+  justify-content: center;
+  gap: 12px;
+  margin-top: 18px;
+  background: rgba(0,0,0,0.75);
+  backdrop-filter: blur(12px);
+  padding: 12px;
+  border-radius: 16px;
+  border: 1px solid gold;
+  box-shadow: 0 0 20px rgba(255,215,0,0.4);
+}
+
+/* أزرار الإدارة */
+.admin-menu button {
+  padding: 8px 16px;
+  border-radius: 10px;
+  border: none;
+  cursor: pointer;
+  font-weight: bold;
+  font-size: 14px;
+  transition: 0.25s;
+}
+
+/* تعديل */
+.admin-menu button:nth-child(1) {
+  background: gold;
+  color: black;
+}
+
+/* تعطيل */
+.admin-menu button:nth-child(2) {
+  background: orange;
+  color: black;
+}
+
+/* حذف */
+.admin-menu button:nth-child(3) {
+  background: crimson;
+  color: white;
+}
+
+/* Hover للأزرار */
+.admin-menu button:hover {
+  transform: scale(1.08);
+  box-shadow: 0 0 10px rgba(255,215,0,0.6);
+}
+/* صندوق عنوان الوحدة الملكي */
+.unit-title-box {
+  margin: 40px auto 0; /* توسيط عمودي */
+  width: fit-content;
+  padding: 14px 60px;
+  border-radius: 18px;
+  font-size: 20px;
+  font-weight: bold;
+  text-align: center;
+  letter-spacing: 1px;
+
+  /* ذهب ملكي فاخر */
+  background: linear-gradient(135deg, #b88a1c, #ffd700, #b88a1c);
+  color: black;
+
+  box-shadow: 
+    0 0 15px rgba(255,215,0,0.6),
+    inset 0 0 10px rgba(255,255,255,0.4);
+
+  border: 2px solid #ffd700;
+  transition: 0.3s;
+}
+
+/* لمسة فخامة عند المرور */
+.unit-card:hover .unit-title-box {
+  transform: scale(1.05);
+  box-shadow: 0 0 25px rgba(255,215,0,0.9);
+}
+.unit-settings {
+  position: relative;
+  cursor: pointer;
+  font-size: 20px;
+}
+
+.unit-menu {
+  position: absolute;
+  top: 28px;
+  right: 0;
+  background: #1a1a1a;
+  border-radius: 10px;
+  padding: 8px;
+  width: 170px;
+  box-shadow: 0 0 12px rgba(0,0,0,0.4);
+  z-index: 100;
+}
+
+.unit-menu button {
+  width: 100%;
+  background: transparent;
+  border: none;
+  color: white;
+  text-align: right;
+  padding: 8px;
+  cursor: pointer;
+}
+
+.unit-menu button:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.unit-menu .danger {
+  color: #ff5c5c;
+}
+
+.unit-edit-input {
+  background: #111;
+  border: 1px solid #444;
+  padding: 6px;
+  color: white;
+  border-radius: 6px;
+}
+/* ================= CARD ================= */
+
+.unit-card {
+  background: #0f0f0f;
+  border-radius: 14px;
+  padding: 20px;
+  border: 1px solid #222;
+  transition: 0.3s;
+}
+
+.unit-card:hover {
+  border-color: #d4af37;
+}
+
+/* ================= TITLE ================= */
+
+.unit-title {
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* ================= ACTIONS ================= */
+
+.unit-actions {
+  margin-top: 14px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ================= GOLD BUTTON ================= */
+
+.gold-btn {
+  background: linear-gradient(
+    135deg,
+    #f5d76e,
+    #d4af37
+  );
+  border: none;
+  color: black;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.25s;
+}
+
+.gold-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(212,175,55,0.4);
+}
+
+/* زر الحذف */
+.gold-btn.danger {
+  background: linear-gradient(
+    135deg,
+    #ff6b6b,
+    #c0392b
+  );
+  color: white;
+}
+
+/* ================= INPUT ================= */
+
+.unit-edit-input {
+  background: #111;
+  border: 1px solid #444;
+  padding: 6px;
+  color: white;
+  border-radius: 6px;
+}
+.unit-card {
+  background: #0f0f0f;
+  border-radius: 14px;
+  padding: 20px;
+  border: 1px solid #222;
+}
+
+/* ===== HEADER ===== */
+
+.unit-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.unit-title {
+  font-size: 20px;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+/* ===== GEAR ===== */
+
+.gear-btn {
+  font-size: 20px;
+  cursor: pointer;
+  transition: 0.2s;
+}
+
+.gear-btn:hover {
+  transform: rotate(90deg);
+  color: #d4af37;
+}
+
+/* ===== ACTIONS ===== */
+
+.unit-actions {
+  margin-top: 15px;
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+/* ===== GOLD BUTTON ===== */
+
+.gold-btn {
+  background: linear-gradient(135deg,#f5d76e,#d4af37);
+  border: none;
+  color: black;
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-weight: bold;
+  cursor: pointer;
+  transition: 0.25s;
+}
+
+.gold-btn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(212,175,55,0.4);
+}
+
+.gold-btn.danger {
+  background: linear-gradient(135deg,#ff6b6b,#c0392b);
+  color: white;
+}
+
+/* ===== INPUT ===== */
+
+.unit-edit-input {
+  background: #111;
+  border: 1px solid #444;
+  padding: 6px;
+  color: white;
+  border-radius: 6px;
+}
+/* ================= FINAL CENTER FIX ================= */
+
+.unit-header {
+  display: flex;
+  justify-content: center;   /* توسيط كامل */
+  align-items: center;
+  position: relative;
+}
+
+/* اسم الوحدة فى المنتصف الحقيقى */
+.unit-title {
+  margin: 0 auto;
+  text-align: center;
+  width: 100%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+/* إبقاء الترس فى مكانه */
+.gear-btn {
+  position: absolute;
+  right: 0;
+}

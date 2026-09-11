@@ -1,0 +1,82 @@
+.admin-unit-card {
+  background: linear-gradient(160deg, #0b0b0b, #000);
+  border: 2px solid rgba(212, 175, 55, 0.6);
+  border-radius: 22px;
+  padding: 22px;
+  margin-bottom: 20px;
+  transition: all 0.3s ease;
+}
+
+.admin-unit-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 10px 35px rgba(212, 175, 55, 0.25);
+}
+
+/* الرأس */
+.admin-unit-header {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 14px;
+}
+
+.admin-unit-order {
+  color: #d4af37;
+  font-size: 13px;
+  letter-spacing: 2px;
+  font-weight: 600;
+}
+
+/* العنوان */
+.admin-unit-title {
+  background: linear-gradient(180deg, #f7e27c, #d4af37);
+  color: #000;
+  font-size: 20px;
+  font-weight: 800;
+  text-align: center;
+  padding: 14px 18px;
+  border-radius: 14px;
+  margin-bottom: 18px;
+}
+
+/* الأزرار */
+.admin-unit-actions {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+/* زر ذهبي */
+.btn-gold {
+  flex: 1;
+  background: #000;
+  border: 1px solid #d4af37;
+  color: #d4af37;
+  padding: 10px 0;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.25s ease;
+}
+
+.btn-gold:hover {
+  background: #d4af37;
+  color: #000;
+}
+
+/* زر خطر */
+.btn-danger {
+  flex: 1;
+  background: #1a0000;
+  border: 1px solid #b30000;
+  color: #ff4d4d;
+  padding: 10px 0;
+  border-radius: 12px;
+  cursor: pointer;
+  font-size: 16px;
+  transition: all 0.25s ease;
+}
+
+.btn-danger:hover {
+  background: #b30000;
+  color: #fff;
+}

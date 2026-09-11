@@ -1,0 +1,72 @@
+.live-page {
+  padding: 40px;
+  text-align: center;
+  color: white;
+}
+
+.live-title {
+  font-size: 28px;
+  margin-bottom: 20px;
+}
+
+.live-input {
+  width: 60%;
+  padding: 14px;
+  border-radius: 10px;
+  border: 2px solid #d4af37;
+  background: #0b0b0b;
+  color: white;
+  margin-bottom: 25px;
+}
+
+/* BUTTONS */
+
+.live-buttons {
+  display: flex;
+  gap: 20px;
+  justify-content: center;
+  margin-bottom: 25px;
+}
+
+.btn {
+  padding: 14px 28px;
+  border-radius: 12px;
+  font-weight: bold;
+  cursor: pointer;
+  border: none;
+  transition: all .3s ease;
+}
+
+.btn.gold {
+  background: linear-gradient(135deg, #f6e27a, #d4af37, #b8962e);
+  color: black;
+}
+
+.btn.gold:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 0 18px rgba(212,175,55,.6);
+}
+
+.btn.gold:active {
+  transform: scale(.95);
+}
+
+.btn.danger {
+  border-color: #ff4d4d;
+  color: #ff4d4d;
+}
+
+/* VIDEO */
+
+.video-wrapper {
+  margin-top: 30px;
+  display: flex;
+  justify-content: center;
+}
+
+.video-wrapper iframe {
+  width: 800px;
+  height: 450px;
+  border-radius: 14px;
+  border: none;
+}

@@ -1,0 +1,74 @@
+.unit-card {
+  position: relative;
+  background: #111;
+  padding: 80px 20px 40px;
+  border-radius: 22px;
+  border: 1px solid #222;
+  box-shadow: 0 0 15px rgba(0,0,0,0.8);
+  cursor: pointer;
+}
+
+/* ⚙️ الترس */
+.unit-gear {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  font-size: 20px;
+  color: gold;
+  cursor: pointer;
+}
+
+/* قائمة الإدارة */
+.unit-menu {
+  position: absolute;
+  top: 40px;
+  right: 12px;
+  background: #000;
+  border: 1px solid gold;
+  border-radius: 12px;
+  padding: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.unit-menu button {
+  background: black;
+  color: gold;
+  border: 1px solid gold;
+  padding: 6px 12px;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+/* 🏆 عنوان الوحدة الذهبي */
+.unit-title-box {
+  margin: auto;
+  width: fit-content;
+  padding: 12px 50px;
+  border-radius: 18px;
+  font-size: 20px;
+  font-weight: bold;
+  background: linear-gradient(135deg,#b88a1c,#ffd700,#b88a1c);
+  color: black;
+  box-shadow: 0 0 15px rgba(255,215,0,0.6);
+  text-align: center;
+}
+.add-unit-btn {
+  padding: 14px 26px;
+  background: black;
+  color: gold;
+  border: 2px solid gold;
+  border-radius: 12px;
+  font-size: 16px;
+  font-weight: bold;
+  cursor: pointer;
+  box-shadow: 0 0 12px rgba(255,215,0,0.4);
+  transition: 0.3s;
+}
+
+.add-unit-btn:hover {
+  background: gold;
+  color: black;
+  box-shadow: 0 0 25px rgba(255,215,0,0.8);
+}

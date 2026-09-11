@@ -1,0 +1,84 @@
+/* ===============================
+   الصفحة
+================================ */
+
+.live-container {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.live-card {
+  text-align: center;
+  padding: 40px;
+  border-radius: 18px;
+  background: #0b0b0b;
+  box-shadow: 0 0 40px rgba(0,0,0,0.6);
+}
+
+.live-title {
+  font-size: 26px;
+  font-weight: bold;
+  margin-bottom: 15px;
+}
+
+.live-status {
+  margin-bottom: 25px;
+  opacity: 0.8;
+}
+
+/* ===============================
+   GOLD LIVE BUTTON
+================================ */
+
+.live-start-btn {
+  background: #050505;
+  color: #d4af37;
+  padding: 14px 36px;
+  font-size: 20px;
+  font-weight: bold;
+  border-radius: 14px;
+  cursor: pointer;
+  border: 1.5px solid transparent;
+
+  background-image:
+    linear-gradient(#050505, #050505),
+    linear-gradient(135deg, #f6e27a, #d4af37, #b8962e);
+
+  background-origin: border-box;
+  background-clip: padding-box, border-box;
+
+  transition: all 0.35s ease;
+  letter-spacing: 1px;
+}
+
+/* Hover */
+.live-start-btn:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 0 12px rgba(212,175,55,0.45),
+    0 0 28px rgba(212,175,55,0.25);
+}
+
+/* Click */
+.live-start-btn:active {
+  transform: scale(0.95);
+}
+
+.live-start-icon {
+  margin-left: 10px;
+  font-size: 22px;
+  color: #f6e27a;
+}
+
+/* ===============================
+   LIVE STATUS
+================================ */
+
+.live-now {
+  color: #22c55e;
+  font-size: 22px;
+  font-weight: bold;
+}

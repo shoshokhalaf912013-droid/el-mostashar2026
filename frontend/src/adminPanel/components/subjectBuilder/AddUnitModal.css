@@ -1,0 +1,60 @@
+.add-unit-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.7);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 999;
+}
+
+.add-unit-modal {
+  background: #000;
+  border: 2px solid #d4af37;
+  border-radius: 20px;
+  padding: 26px;
+  width: 340px;
+  text-align: center;
+}
+
+.add-unit-modal h3 {
+  color: #d4af37;
+  margin-bottom: 18px;
+}
+
+.add-unit-modal input {
+  width: 100%;
+  margin-bottom: 12px;
+  padding: 10px;
+  border-radius: 10px;
+  border: 1px solid #d4af37;
+  background: #0b0b0b;
+  color: #fff;
+}
+
+.add-unit-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+.btn-gold {
+  flex: 1;
+  background: #d4af37;
+  border: none;
+  color: #000;
+  padding: 10px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.btn-cancel {
+  flex: 1;
+  background: #222;
+  border: 1px solid #555;
+  color: #aaa;
+  padding: 10px;
+  border-radius: 12px;
+  cursor: pointer;
+}

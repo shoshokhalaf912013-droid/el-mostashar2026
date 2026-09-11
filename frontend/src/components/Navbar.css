@@ -1,0 +1,49 @@
+/* ===========================
+   NAVBAR FIXED STYLING
+   =========================== */
+
+.navbar {
+  width: 100%;
+  padding: 15px 25px;
+  background: #000;
+  display: flex;
+  justify-content: space-between; /* بدل من end */
+  align-items: center;
+  position: fixed;
+  top: 0;
+  right: 0;
+  z-index: 1000;
+  direction: rtl;
+}
+
+/* لجعل الصفحة لا تختفي خلف النافبار */
+body {
+  padding-top: 70px;
+}
+
+.nav-links {
+  list-style: none;
+  display: flex;
+  gap: 25px;
+  align-items: center;
+}
+
+.nav-links li a {
+  color: white;
+  font-size: 18px;
+  text-decoration: none;
+  font-weight: bold;
+}
+
+.nav-links li a:hover {
+  color: #ffd700;
+}
+
+/* زر السوبر أدمن */
+.superadmin-btn {
+  background: #ffd700;
+  padding: 8px 15px;
+  border-radius: 6px;
+  color: black !important;
+  font-weight: bold;
+}
