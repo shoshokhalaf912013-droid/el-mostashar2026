@@ -14,206 +14,427 @@ import BirthdayGlow from "../components/BirthdayGlow";
 
 /* =====================================
    🎂 Birthday TEST MODE
+
+   false = تاريخ الميلاد الحقيقي
+   true  = تشغيل عيد الميلاد للاختبار
 ===================================== */
 const FORCE_BIRTHDAY_MODE = false;
 
 export default function Home() {
-
   const navigate = useNavigate();
+
+  /* =========================================================
+     STATES
+  ========================================================= */
 
   const [studentName, setStudentName] = useState("");
   const [userLogged, setUserLogged] = useState(false);
   const [ready, setReady] = useState(false);
   const [showBirthday, setShowBirthday] = useState(false);
 
-  /* ===============================
-     معرفة المستخدم + جلب الاسم
-  =============================== */
+  /* =========================================================
+     FEATURES
+  ========================================================= */
+
+  const features = [
+    "📘 دروس تفاعلية",
+    "📝 اختبارات ذكية تقيس فهمك بدقة",
+    "🎥 فيديوهات شرح عالية الجودة",
+    "📄 ملفات PDF شاملة لكل المنهج",
+    "🏆 متابعة تقدمك في كل درس",
+  ];
+
+  /* =========================================================
+     COLORS
+  ========================================================= */
+
+  const ELECTRIC_BLUE = "#00E5FF";
+  const DEEP_GOLD = "#C68A00";
+
+  /* =========================================================
+     ELECTRIC COLOR WAVE
+
+     تبدأ:
+     أزرق
+     ذهبي
+     أزرق
+     ذهبي
+     أزرق
+
+     ثم تنعكس الموجة من الأعلى للأسفل.
+     
+     العناصر نفسها ثابتة تمامًا.
+  ========================================================= */
+
+  const [featureColors, setFeatureColors] = useState(
+    features.map((_, index) => index % 2 === 0)
+  );
+
+  const [waveIndex, setWaveIndex] = useState(0);
+
   useEffect(() => {
+    const interval = setInterval(() => {
+      setFeatureColors((previous) => {
+        const next = [...previous];
 
-    const unsub = onAuthStateChanged(auth, async (user) => {
+        next[waveIndex] = !next[waveIndex];
 
-      if (!user) {
-        setUserLogged(false);
-        setStudentName("");
-        setReady(true);
-        return;
-      }
+        return next;
+      });
 
-      setUserLogged(true);
+      setWaveIndex((previous) => {
+        return (previous + 1) % features.length;
+      });
+    }, 2200);
 
-      try {
+    return () => {
+      clearInterval(interval);
+    };
+  }, [waveIndex, features.length]);
 
-        const snap = await getDoc(doc(db, "users", user.uid));
+  /* =========================================================
+     AUTH + USER DATA + BIRTHDAY
+  ========================================================= */
 
-        let name = "";
-        let data = {};
+  useEffect(() => {
+    const unsub = onAuthStateChanged(
+      auth,
+      async (user) => {
+        /* =========================================
+           NO USER
+        ========================================= */
 
-        if (snap.exists()) {
-          data = snap.data();
-          name =
-            data.fullName ||
-            data.name ||
-            user.displayName ||
-            user.email.split("@")[0];
-        } else {
-          name = user.email.split("@")[0];
+        if (!user) {
+          setUserLogged(false);
+          setStudentName("");
+          setShowBirthday(false);
+          setReady(true);
+
+          return;
         }
 
-        setStudentName(name);
+        setUserLogged(true);
 
-        const today = new Date();
-        let isBirthdayToday = false;
+        try {
+          /* =========================================
+             USER DOCUMENT
+          ========================================= */
 
-        if (FORCE_BIRTHDAY_MODE) {
-          isBirthdayToday = true;
-        } else if (data.dateOfBirth) {
+          const snap = await getDoc(
+            doc(db, "users", user.uid)
+          );
 
-          let birthDate = null;
+          let data = {};
+          let name = "";
 
-          // =========================================
-          // قراءة تاريخ الميلاد بأمان
-          // =========================================
+          if (snap.exists()) {
+            data = snap.data();
 
-          if (typeof data.dateOfBirth === "string") {
+            name =
+              data.fullName ||
+              data.name ||
+              user.displayName ||
+              user.email?.split("@")[0] ||
+              "";
+          } else {
+            name =
+              user.displayName ||
+              user.email?.split("@")[0] ||
+              "";
+          }
 
-            // إذا كان التاريخ بالشكل:
-            // YYYY-MM-DD
-            const parts = data.dateOfBirth.split("-");
+          setStudentName(name);
 
-            if (parts.length === 3) {
-              const year = Number(parts[0]);
-              const month = Number(parts[1]);
-              const day = Number(parts[2]);
+          /* =========================================
+             🎂 BIRTHDAY LOGIC
+          ========================================= */
 
-              if (
-                Number.isInteger(year) &&
-                Number.isInteger(month) &&
-                Number.isInteger(day)
-              ) {
-                birthDate = {
-                  month,
-                  day,
-                };
+          const today = new Date();
+
+          let isBirthdayToday = false;
+
+          /* =========================================
+             TEST MODE
+          ========================================= */
+
+          if (FORCE_BIRTHDAY_MODE) {
+            isBirthdayToday = true;
+          }
+
+          /* =========================================
+             REAL BIRTHDAY
+          ========================================= */
+
+          else if (data.dateOfBirth) {
+            let birthDate = null;
+
+            /* =====================================
+               STRING YYYY-MM-DD
+            ===================================== */
+
+            if (
+              typeof data.dateOfBirth === "string"
+            ) {
+              const parts =
+                data.dateOfBirth.split("-");
+
+              if (parts.length === 3) {
+                const year =
+                  Number(parts[0]);
+
+                const month =
+                  Number(parts[1]);
+
+                const day =
+                  Number(parts[2]);
+
+                if (
+                  Number.isInteger(year) &&
+                  Number.isInteger(month) &&
+                  Number.isInteger(day)
+                ) {
+                  birthDate = {
+                    month,
+                    day,
+                  };
+                }
               }
             }
 
-          } else if (
-            data.dateOfBirth &&
-            typeof data.dateOfBirth.toDate === "function"
-          ) {
+            /* =====================================
+               FIRESTORE TIMESTAMP
+            ===================================== */
 
-            const birth = data.dateOfBirth.toDate();
+            else if (
+              data.dateOfBirth &&
+              typeof data.dateOfBirth.toDate ===
+                "function"
+            ) {
+              const birth =
+                data.dateOfBirth.toDate();
 
-            birthDate = {
-              month: birth.getMonth() + 1,
-              day: birth.getDate(),
-            };
+              birthDate = {
+                month:
+                  birth.getMonth() + 1,
 
-          } else if (data.dateOfBirth instanceof Date) {
+                day:
+                  birth.getDate(),
+              };
+            }
 
-            birthDate = {
-              month: data.dateOfBirth.getMonth() + 1,
-              day: data.dateOfBirth.getDate(),
-            };
+            /* =====================================
+               JAVASCRIPT DATE
+            ===================================== */
+
+            else if (
+              data.dateOfBirth instanceof Date
+            ) {
+              birthDate = {
+                month:
+                  data.dateOfBirth.getMonth() + 1,
+
+                day:
+                  data.dateOfBirth.getDate(),
+              };
+            }
+
+            /* =====================================
+               COMPARE DAY + MONTH ONLY
+            ===================================== */
+
+            if (birthDate) {
+              isBirthdayToday =
+                birthDate.day ===
+                  today.getDate() &&
+                birthDate.month ===
+                  today.getMonth() + 1;
+            }
           }
 
-          // =========================================
-          // عيد الميلاد = نفس اليوم والشهر فقط
-          // =========================================
+          setShowBirthday(
+            isBirthdayToday
+          );
 
-          if (birthDate) {
+          /* =========================================
+             🎵 BIRTHDAY SOUND
+          ========================================= */
 
-            isBirthdayToday =
-              birthDate.day === today.getDate() &&
-              birthDate.month === today.getMonth() + 1;
+          if (isBirthdayToday) {
+            const audio =
+              new Audio(
+                "/sounds/preview.mp3"
+              );
+
+            audio.volume = 0.6;
+
+            const playSound = () => {
+              audio.play().catch(() => {});
+
+              window.removeEventListener(
+                "click",
+                playSound
+              );
+            };
+
+            window.addEventListener(
+              "click",
+              playSound
+            );
           }
+        } catch (err) {
+          console.error(
+            "Home Error:",
+            err
+          );
+
+          setShowBirthday(false);
+        } finally {
+          setReady(true);
         }
-
-        if (isBirthdayToday) {
-          setShowBirthday(true);
-
-          const audio = new Audio("/sounds/preview.mp3");
-          audio.volume = 0.6;
-
-          const playSound = () => {
-            audio.play().catch(() => {});
-            window.removeEventListener("click", playSound);
-          };
-
-          window.addEventListener("click", playSound);
-        }
-
-      } catch (err) {
-        console.error("Home Error:", err);
-      } finally {
-        setReady(true);
       }
-    });
+    );
 
-    return () => unsub();
-
+    return () => {
+      unsub();
+    };
   }, []);
 
-  /* ===============================
-     زر الدخول 🚀
-  =============================== */
-  const handleStartJourney = () => {
+  /* =========================================================
+     START JOURNEY
+  ========================================================= */
 
+  const handleStartJourney = () => {
     if (!userLogged) {
       navigate("/login");
       return;
     }
 
-    navigate("/student"); // صفحة الطالب
+    navigate("/student");
   };
 
-  /* ===============================
+  /* =========================================================
      UI
-  =============================== */
+  ========================================================= */
+
   return (
-    <div className="home-wrapper flex flex-col gap-16 relative" dir="rtl">
+    <div
+      className="
+        home-wrapper
+        flex
+        flex-col
+        gap-16
+        relative
+      "
+      dir="rtl"
+    >
+      {/* =================================================
+          HERO
+      ================================================= */}
 
-      <div className="flex flex-col md:flex-row items-center justify-between gap-12">
+      <div
+        className="
+          flex
+          flex-col
+          md:flex-row
+          items-center
+          justify-between
+          gap-12
+        "
+      >
+        {/* =================================================
+            TEXT SIDE
+        ================================================= */}
 
-        {/* ================= النص ================= */}
-        <div className="w-full md:w-1/2 text-right">
+        <div
+          className="
+            w-full
+            md:w-1/2
+            text-right
+          "
+        >
+          {/* =============================================
+              TITLE
+          ============================================= */}
 
           <motion.h1
-            className="text-4xl md:text-6xl font-bold text-gold mb-6"
-            initial={{ opacity: 0, y: -20 }}
-            animate={{ opacity: 1, y: 0 }}
+            className="
+              text-4xl
+              md:text-6xl
+              font-bold
+              text-gold
+              mb-6
+            "
+            initial={{
+              opacity: 0,
+              y: -20,
+            }}
+            animate={{
+              opacity: 1,
+              y: 0,
+            }}
           >
-            مرحبًا بك في منصة المستشار التعليمية 🎓
+            مرحبًا بك في منصة المستشار
+            التعليمية 🎓
           </motion.h1>
 
+          {/* =============================================
+              DESCRIPTION
+          ============================================= */}
+
           <motion.p
-            className="text-gray-300 text-lg md:text-xl mb-10"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
+            className="
+              text-gray-300
+              text-lg
+              md:text-xl
+              mb-10
+            "
+            initial={{
+              opacity: 0,
+            }}
+            animate={{
+              opacity: 1,
+            }}
           >
-            المنصة المتكاملة لدراسة التاريخ والجغرافيا — دروس تفاعلية،
-            اختبارات ذكية، مواد مرئية وملفات PDF تحت إشراف مستر
-            <strong className="text-gold"> خلف محروس</strong>.
+            المنصة المتكاملة لدراسة التاريخ
+            والجغرافيا — دروس تفاعلية،
+            اختبارات ذكية، مواد مرئية وملفات
+            PDF تحت إشراف مستر
+            <strong className="text-gold">
+              {" "}
+              خلف محروس
+            </strong>
+            .
           </motion.p>
 
-          {/* 🚀 زر استكمل رحلتك التعليمية */}
+          {/* =============================================
+              START JOURNEY BUTTON
+          ============================================= */}
+
           {ready && (
             <motion.button
               onClick={handleStartJourney}
-              whileHover={{ scale: 1.08 }}
-              whileTap={{ scale: 0.95 }}
+              whileHover={{
+                scale: 1.08,
+              }}
+              whileTap={{
+                scale: 0.95,
+              }}
               animate={{
                 boxShadow: [
-                  "0 0 10px #FFD700",
-                  "0 0 30px #FFD700",
-                  "0 0 10px #FFD700",
+                  "0 0 8px rgba(255,215,0,0.55)",
+                  "0 0 18px rgba(255,215,0,0.78)",
+                  "0 0 8px rgba(255,215,0,0.55)",
                 ],
               }}
-              transition={{ duration: 2, repeat: Infinity }}
+              transition={{
+                duration: 3.5,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
               className="
-                mb-10
-                px-8 py-4
+                mb-8
+                px-8
+                py-4
                 rounded-2xl
                 font-bold
                 text-lg
@@ -228,107 +449,311 @@ export default function Home() {
             </motion.button>
           )}
 
-          {/* ================= المميزات ================= */}
-          <motion.div
-            className="relative rounded-3xl border border-cyan-400 p-6 space-y-5 overflow-hidden"
+          {/* =================================================
+              FEATURES BOX
+
+              ثابتة تمامًا
+              الموجة اللونية فقط
+          ================================================= */}
+
+          <div
+            className="
+              relative
+              rounded-3xl
+              p-6
+              space-y-5
+              overflow-hidden
+            "
             style={{
+              border:
+                "2px solid #FFD700",
+
+              background:
+                "linear-gradient(145deg, rgba(255,215,0,0.035), rgba(0,0,0,0.99))",
+
               boxShadow:
-                "0 0 20px #00e5ff, inset 0 0 25px rgba(0,229,255,0.25)"
+                "0 0 12px rgba(255,215,0,0.40), " +
+                "0 0 26px rgba(255,215,0,0.16), " +
+                "inset 0 0 18px rgba(255,215,0,0.05)",
             }}
           >
+            {/* =========================================
+                FEATURES
+            ========================================= */}
 
-            {[
-              "📘 دروس تفاعلية",
-              "📝 اختبارات ذكية تقيس فهمك بدقة",
-              "🎥 فيديوهات شرح عالية الجودة",
-              "📄 ملفات PDF شاملة لكل المنهج",
-              "🏆 متابعة تقدمك في كل درس"
-            ].map((item, i) => (
+            {features.map(
+              (item, i) => {
+                const activeColor =
+                  featureColors[i]
+                    ? ELECTRIC_BLUE
+                    : DEEP_GOLD;
+
+                return (
+                  <div
+                    key={i}
+                    className="
+                      relative
+                      z-10
+                      text-xl
+                      md:text-2xl
+                      font-extrabold
+                      px-4
+                      py-3
+                      rounded-xl
+                    "
+                    style={{
+                      background:
+                        "#000000",
+
+                      border:
+                        "1px solid rgba(255,255,255,0.08)",
+
+                      color:
+                        activeColor,
+
+                      textShadow:
+                        "none",
+
+                      boxShadow:
+                        "none",
+
+                      transform:
+                        "none",
+
+                      transition:
+                        "color 0.15s linear",
+                    }}
+                  >
+                    {item}
+                  </div>
+                );
+              }
+            )}
+          </div>
+        </div>
+
+        {/* =================================================
+            IMAGE SIDE
+        ================================================= */}
+
+        <div
+          className="
+            w-full
+            md:w-1/2
+            flex
+            flex-col
+            items-center
+          "
+        >
+          <motion.img
+            src={heroImage}
+            alt="المستشار"
+            className="
+              rounded-2xl
+              shadow-xl
+              border
+              border-gold
+              w-full
+              max-w-md
+            "
+          />
+
+          {/* =================================================
+              STUDENT NAME
+          ================================================= */}
+
+          {ready &&
+            userLogged &&
+            studentName && (
+              <div
+                className="
+                  relative
+                  inline-block
+                "
+              >
+                <motion.h2
+                  className="
+                    mt-6
+                    text-2xl
+                    md:text-3xl
+                    font-bold
+                    text-yellow-400
+                    text-center
+                  "
+                  animate={
+                    showBirthday
+                      ? {
+                          scale: [
+                            1.05,
+                            1,
+                            1.05,
+                          ],
+                        }
+                      : {}
+                  }
+                  transition={{
+                    duration: 3,
+                    repeat: Infinity,
+                  }}
+                >
+                  👋 أهلاً بك يا{" "}
+                  {studentName}
+                </motion.h2>
+
+                <NameGoldenBurst
+                  active={
+                    showBirthday
+                  }
+                />
+              </div>
+            )}
+
+          {/* =================================================
+              BIRTHDAY
+          ================================================= */}
+
+          {showBirthday && (
+            <div
+              className="
+                relative
+                mt-6
+                text-center
+              "
+            >
               <motion.div
-                key={i}
-                className="text-xl md:text-2xl font-extrabold px-4 py-3 rounded-xl bg-black/40"
+                className="
+                  text-3xl
+                  font-bold
+                  text-gold
+                "
                 animate={{
-                  color:
-                    i % 2 === 0
-                      ? ["#FFD700", "#38bdf8", "#FFD700"]
-                      : ["#38bdf8", "#FFD700", "#38bdf8"],
-                  y: [0, -8, 0],
+                  scale: [
+                    1,
+                    1.12,
+                    1,
+                  ],
                 }}
                 transition={{
                   duration: 3,
                   repeat: Infinity,
-                  delay: i * 0.3,
                 }}
-              >
-                {item}
-              </motion.div>
-            ))}
-          </motion.div>
-
-        </div>
-
-        {/* ================= الصورة ================= */}
-        <div className="w-full md:w-1/2 flex flex-col items-center">
-
-          <motion.img
-            src={heroImage}
-            alt="المستشار"
-            className="rounded-2xl shadow-xl border border-gold w-full max-w-md"
-          />
-
-          {ready && userLogged && studentName && (
-            <div className="relative inline-block">
-
-              <motion.h2
-                className="mt-6 text-2xl md:text-3xl font-bold text-yellow-400 text-center"
-                animate={showBirthday ? { scale: [1.05,1,1.05] } : {}}
-                transition={{ duration: 3, repeat: Infinity }}
-              >
-                👋 أهلاً بك يا {studentName}
-              </motion.h2>
-
-              <NameGoldenBurst active={showBirthday} />
-            </div>
-          )}
-
-          {showBirthday && (
-            <div className="relative mt-6 text-center">
-
-              <motion.div
-                className="text-3xl font-bold text-gold"
-                animate={{ scale: [1,1.12,1] }}
-                transition={{ duration: 3, repeat: Infinity }}
               >
                 🎉 اليوم عيد ميلادك 🎂
                 <br />
                 كل عام وأنت منور المنصة ✨
               </motion.div>
 
-              <BirthdayGlow active={true} />
+              <BirthdayGlow
+                active={true}
+              />
             </div>
           )}
-
         </div>
       </div>
 
-      {/* ================= الشعار السفلى ================= */}
-      <motion.div className="relative w-full border border-gold rounded-2xl text-center py-16 text-xl md:text-2xl font-bold overflow-hidden">
+      {/* =================================================
+          BOTTOM SLOGAN + GOLDEN FOUNTAIN
+      ================================================= */}
+
+      <div
+        className="
+          relative
+          w-full
+          border
+          border-gold
+          rounded-2xl
+          py-16
+          overflow-hidden
+        "
+        style={{
+          boxShadow:
+            "0 0 15px rgba(255,215,0,0.22)",
+        }}
+      >
+        {/* =============================================
+            BLUE SLOGAN
+
+            لون أزرق غامق فقط
+            حجم أكبر
+            بدون Glow
+
+            يتحرك يمين ← يسار ← يمين
+            بسلاسة
+        ============================================= */}
 
         <motion.div
-          className="relative z-10 flex flex-wrap justify-center gap-4"
-          animate={{ x: [0,20,0], color:["#FFD700","#38bdf8","#FFD700"] }}
-          transition={{ duration:4, repeat:Infinity }}
+          className="
+            relative
+            z-10
+            flex
+            justify-center
+            items-center
+            w-full
+            whitespace-nowrap
+            px-6
+          "
+          animate={{
+            x: [
+              0,
+              -80,
+              0,
+            ],
+          }}
+          transition={{
+            duration: 16,
+            repeat: Infinity,
+            ease: "easeInOut",
+          }}
+          style={{
+            color:
+              "#006F8F",
+
+            /* =====================================
+               تكبير الشعار فقط
+            ===================================== */
+
+            fontSize:
+              "2em",
+
+            fontWeight:
+              900,
+
+            lineHeight:
+              1.4,
+
+            textShadow:
+              "none",
+          }}
         >
-          <span>اعظم القيم في الحياة هو النجاح ✨</span>
-          <span>اوصل لحلمك بعلمك</span>
+          اعظم القيم في الحياة هو النجاح ✨
+
+          <span
+            style={{
+              marginInlineStart:
+                "2.5rem",
+            }}
+          >
+            اوصل لحلمك بعلمك
+          </span>
         </motion.div>
 
-        <div className="absolute inset-0 top-10 pointer-events-none">
-          <GoldenFountain active={true} />
+        {/* =============================================
+            GOLDEN FOUNTAIN
+        ============================================= */}
+
+        <div
+          className="
+            absolute
+            inset-0
+            top-10
+            pointer-events-none
+          "
+        >
+          <GoldenFountain
+            active={true}
+          />
         </div>
-
-      </motion.div>
-
+      </div>
     </div>
   );
 }
