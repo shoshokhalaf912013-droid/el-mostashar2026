@@ -209,6 +209,20 @@ export default function SuperAdminLayout() {
         />
 
         {/* =========================
+            QUESTION BANK
+        ========================= */}
+
+        <NavCard
+          icon="📚"
+          title="بنك الأسئلة"
+          subtitle="إدارة ومراجعة أسئلة البنك"
+          active={location.pathname.includes("/super-admin/question-bank")}
+          onClick={() =>
+            navigate("question-bank")
+          }
+        />
+
+        {/* =========================
             STATISTICS
         ========================= */}
 

@@ -41,10 +41,34 @@ Super Admin
 1. إنشاء امتحان عام
 2. إنشاء امتحان مرتبط بدرس
 3. تعديل امتحان
+4. الأسئلة المقالية
+5. تصحيح إجابات الطلاب
 ========================================================
 */
 
 import ExamBuilder from "../pages/teacher/ExamBuilder";
+
+/*
+========================================================
+ESSAY GRADING
+
+شاشة تصحيح الأسئلة المقالية
+
+المسار:
+ /teacher/exam-grading/:examId
+
+سيتم من خلالها:
+1. عرض الطلاب الذين أدوا الامتحان
+2. عرض إجابات الأسئلة المقالية
+3. عرض الإجابة النصية
+4. عرض صورة الحل إن وجدت
+5. إدخال درجة السؤال
+6. كتابة تعليق المدرس
+7. حفظ التصحيح
+========================================================
+*/
+
+import TeacherEssayGrading from "../pages/teacher/TeacherEssayGrading";
 
 /* =========================
    LIVE SYSTEM
@@ -77,6 +101,10 @@ export default function TeacherRoutes() {
 
   /* =========================
      الصلاحيات
+
+     مهم:
+     Super Admin مسموح له أيضًا
+     بإنشاء وإدارة الامتحانات.
   ========================= */
 
   const allowedRoles = [
@@ -169,6 +197,8 @@ export default function TeacherRoutes() {
            /teacher/exams/add
 
            لا يوجد ارتباط إجباري بدرس
+
+           Teacher / Admin / Super Admin
         ------------------------------------------------ */}
 
         <Route
@@ -182,6 +212,8 @@ export default function TeacherRoutes() {
            هذا هو المسار الذي يستخدمه LessonPlayer
 
            /teacher/exam-builder/:gradeId/:subjectId/:unitId/:lessonId
+
+           Teacher / Admin / Super Admin
         ------------------------------------------------ */}
 
         <Route
@@ -194,6 +226,8 @@ export default function TeacherRoutes() {
 
            نحافظ عليه الآن كمدخل للـExamBuilder
            إلى أن نربطه بالـexamId الفعلي.
+
+           Teacher / Admin / Super Admin
         ------------------------------------------------ */}
 
         <Route
@@ -211,6 +245,34 @@ export default function TeacherRoutes() {
         <Route
           path="exam-preview/:gradeId/:subjectId/:unitId/:lessonId"
           element={<ExamBuilder />}
+        />
+
+        {/* =================================================
+            ESSAY GRADING
+
+            تصحيح إجابات الطلاب في الأسئلة المقالية
+
+            المسار:
+            /teacher/exam-grading/:examId
+
+            الوظيفة:
+            - عرض محاولات الطلاب
+            - عرض السؤال المقالي
+            - عرض إجابة الطالب النصية
+            - عرض صورة الإجابة
+            - إدخال الدرجة
+            - إضافة تعليق
+            - حفظ التصحيح
+
+            الصلاحيات:
+            Teacher
+            Admin
+            Super Admin
+        ================================================= */}
+
+        <Route
+          path="exam-grading/:examId"
+          element={<TeacherEssayGrading />}
         />
 
         {/* =========================

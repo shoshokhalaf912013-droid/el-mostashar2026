@@ -1123,328 +1123,152 @@ useEffect(() => {
   // =======================================================
   // EXAMS
   // =======================================================
+  //
+  // The exam builder saves the real lesson relation in one or
+  // more of these fields:
+  //   exam.lessonId
+  //   exam.selectedLessonIds[]
+  //   exam.questions[].lessonId
+  //   exam.questionBankSettings.lessonIds[] (legacy)
+  //
+  // The lesson page must therefore match the actual lesson FIRST,
+  // then use grade / subject / unit only as compatibility checks.
+  // This is especially important because the public URL may contain
+  // unit/1 while the Firestore unit document has a different ID.
+  // =======================================================
 
   useEffect(() => {
-
-    if (
-      lessonLoading ||
-      !actualLessonId
-    ) {
-
-      setLessonExams(
-        []
-      );
-
-      setExamLoading(
-        false
-      );
-
+    if (lessonLoading || !actualLessonId) {
+      setLessonExams([]);
+      setExamLoading(false);
       return undefined;
     }
 
+    let cancelled = false;
 
-    let cancelled =
-      false;
+    const normalizeId = (value) => {
+      if (value === undefined || value === null) return "";
+      return String(value)
+        .trim()
+        .toLowerCase()
+        .replace(/[-_\s]/g, "");
+    };
 
+    const asIds = (value) => {
+      if (Array.isArray(value)) return value.filter(Boolean);
+      if (value === undefined || value === null || value === "") return [];
+      return [value];
+    };
 
-    const loadExams =
-      async () => {
+    const loadExams = async () => {
+      try {
+        setExamLoading(true);
 
-        try {
+        const response = await api.get("/api/exams");
+        const allExams = Array.isArray(response.data?.exams)
+          ? response.data.exams
+          : [];
 
-          setExamLoading(
-            true
-          );
+        // Use the REAL lesson document fields whenever available.
+        const lessonGrade = normalizeId(lesson?.gradeId || gradeId);
+        const lessonSubject = normalizeId(lesson?.subjectId || subjectId);
+        const lessonUnit = normalizeId(lesson?.unitId || unitId);
+        const currentLesson = normalizeId(actualLessonId);
+        const currentPublicLesson = normalizeId(publicLessonId);
 
+        const isSameLesson = (value) => {
+          const id = normalizeId(value);
+          if (!id) return false;
+          return id === currentLesson || id === currentPublicLesson;
+        };
 
-          const response =
-            await api.get(
-              "/api/exams"
-            );
+        const getExamLessonIds = (exam) => [
+          ...asIds(exam?.lessonId),
+          ...asIds(exam?.selectedLessonIds),
+          ...asIds(exam?.questionBankSettings?.lessonIds),
+        ];
 
+        const getQuestionLessonIds = (exam) =>
+          Array.isArray(exam?.questions)
+            ? exam.questions.flatMap((question) => asIds(question?.lessonId))
+            : [];
 
-          const allExams =
-            Array.isArray(
-              response.data?.exams
-            )
-              ? response.data.exams
-              : [];
+        const finalExams = allExams.filter((exam) => {
+          const directLessonMatch = [
+            ...getExamLessonIds(exam),
+            ...getQuestionLessonIds(exam),
+          ].some(isSameLesson);
 
-
-          // =================================================
-          // NORMALIZE IDS
-          // =================================================
-
-          const normalizeId =
-            (value) => {
-
-              if (
-                value ===
-                  undefined ||
-                value ===
-                  null
-              ) {
-
-                return "";
-              }
-
-
-              return String(
-                value
-              )
-                .trim()
-                .toLowerCase()
-                .replace(
-                  /[-_\s]/g,
-                  ""
-                );
-            };
-
-
-          const currentGrade =
-            normalizeId(
-              gradeId
-            );
-
-
-          const currentSubject =
-            normalizeId(
-              subjectId
-            );
-
-
-          const currentUnit =
-            normalizeId(
-              unitId
-            );
-
-
-          const currentLesson =
-            normalizeId(
-              actualLessonId
-            );
-
-
-          const currentPublicLesson =
-            normalizeId(
-              publicLessonId
-            );
-
-
-          console.log(
-            "Exam matching:",
-            {
-              currentGrade,
-              currentSubject,
-              currentUnit,
-              currentLesson,
-              currentPublicLesson,
-              totalExams:
-                allExams.length,
+          // A direct lesson relation is authoritative. Do NOT reject it
+          // because the public URL uses a different unit identifier.
+          if (directLessonMatch) {
+            if (role === "student" && exam.status !== "published") {
+              return false;
             }
+            return true;
+          }
+
+          // Unit-scope exams (without a specific lesson) should appear
+          // on lessons belonging to the same real Firestore unit.
+          const examGrade = normalizeId(
+            exam?.curriculumGradeId || exam?.gradeId
           );
-
-
-          // =================================================
-          // GRADE + SUBJECT + UNIT
-          // =================================================
-
-          const matchingExams =
-            allExams.filter(
-              (exam) => {
-
-                const examGrade =
-                  normalizeId(
-                    exam.gradeId
-                  );
-
-
-                const examSubject =
-                  normalizeId(
-                    exam.subject
-                  );
-
-
-                const examUnit =
-                  normalizeId(
-                    exam.unitId
-                  );
-
-
-                const gradeMatches =
-                  !exam.gradeId ||
-                  examGrade ===
-                    currentGrade;
-
-
-                const subjectMatches =
-                  !exam.subject ||
-                  examSubject ===
-                    currentSubject;
-
-
-                const unitMatches =
-                  !exam.unitId ||
-                  examUnit ===
-                    currentUnit;
-
-
-                return (
-                  gradeMatches &&
-                  subjectMatches &&
-                  unitMatches
-                );
-              }
-            );
-
-
-          // =================================================
-          // DIRECT LESSON MATCH
-          // =================================================
-
-          const exactLessonExams =
-            matchingExams.filter(
-              (exam) => {
-
-                const lessonIds =
-                  Array.isArray(
-                    exam
-                      .questionBankSettings
-                      ?.lessonIds
-                  )
-                    ? exam
-                        .questionBankSettings
-                        .lessonIds
-                    : [];
-
-
-                const lessonIdMatch =
-                  lessonIds.some(
-                    (id) => {
-
-                      const normalized =
-                        normalizeId(
-                          id
-                        );
-
-
-                      return (
-                        normalized ===
-                          currentLesson ||
-                        normalized ===
-                          currentPublicLesson
-                      );
-                    }
-                  );
-
-
-                const questionLessonMatch =
-                  Array.isArray(
-                    exam.questions
-                  ) &&
-                  exam.questions.some(
-                    (question) => {
-
-                      const normalized =
-                        normalizeId(
-                          question.lessonId
-                        );
-
-
-                      return (
-                        normalized ===
-                          currentLesson ||
-                        normalized ===
-                          currentPublicLesson
-                      );
-                    }
-                  );
-
-
-                return (
-                  lessonIdMatch ||
-                  questionLessonMatch
-                );
-              }
-            );
-
-
-          // =================================================
-          // STUDENT = PUBLISHED ONLY
-          // =================================================
-
-          let finalExams =
-            exactLessonExams;
-
-
-          if (
-            role === "student"
-          ) {
-
-            finalExams =
-              finalExams.filter(
-                (exam) =>
-                  exam.status ===
-                  "published"
-              );
-          }
-
-
-          console.log(
-            "Final lesson exams:",
-            finalExams
+          const examSubject = normalizeId(
+            exam?.subjectId || exam?.subject
           );
+          const examUnit = normalizeId(exam?.unitId);
 
+          const gradeMatches =
+            !examGrade || !lessonGrade || examGrade === lessonGrade;
+          const subjectMatches =
+            !examSubject || !lessonSubject || examSubject === lessonSubject;
+          const unitMatches =
+            !examUnit || !lessonUnit || examUnit === lessonUnit;
 
-          if (
-            !cancelled
-          ) {
+          const hasSpecificLesson =
+            getExamLessonIds(exam).length > 0 ||
+            getQuestionLessonIds(exam).length > 0;
 
-            setLessonExams(
-              finalExams
-            );
+          if (hasSpecificLesson) return false;
+
+          if (role === "student" && exam.status !== "published") {
+            return false;
           }
 
-        } catch (error) {
+          return gradeMatches && subjectMatches && unitMatches;
+        });
 
-          if (
-            !cancelled
-          ) {
+        console.log("Final lesson exams:", {
+          currentLesson,
+          currentPublicLesson,
+          lessonGrade,
+          lessonSubject,
+          lessonUnit,
+          totalExams: allExams.length,
+          matchedExams: finalExams.length,
+          exams: finalExams,
+        });
 
-            console.error(
-              "حدث خطأ أثناء تحميل الامتحانات:",
-              error
-            );
-
-
-            setLessonExams(
-              []
-            );
-          }
-
-        } finally {
-
-          if (
-            !cancelled
-          ) {
-
-            setExamLoading(
-              false
-            );
-          }
+        if (!cancelled) {
+          setLessonExams(finalExams);
         }
-      };
-
+      } catch (error) {
+        if (!cancelled) {
+          console.error("حدث خطأ أثناء تحميل الامتحانات:", error);
+          setLessonExams([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setExamLoading(false);
+        }
+      }
+    };
 
     loadExams();
 
-
     return () => {
-
-      cancelled =
-        true;
+      cancelled = true;
     };
-
   }, [
     lessonLoading,
     actualLessonId,
@@ -1453,8 +1277,8 @@ useEffect(() => {
     subjectId,
     unitId,
     role,
+    lesson,
   ]);
-
 
   // =======================================================
   // EXAM OPEN

@@ -13,6 +13,7 @@ import {
   getDocs,
   deleteDoc,
   doc,
+  updateDoc,
 } from "firebase/firestore";
 
 import { db } from "@/firebase";
@@ -25,6 +26,10 @@ export default function LessonsView() {
 
   const [lessons, setLessons] = useState([]);
   const [loading, setLoading] = useState(true);
+
+  const [editingLessonId, setEditingLessonId] = useState(null);
+  const [editingLessonTitle, setEditingLessonTitle] = useState("");
+  const [savingLessonTitle, setSavingLessonTitle] = useState(false);
 
   const { canManageLessons } = usePermissions();
 
@@ -277,6 +282,62 @@ export default function LessonsView() {
   };
 
   /* =========================================================
+     EDIT LESSON TITLE
+
+     نغيّر title فقط داخل نفس وثيقة الدرس.
+     lesson.id لا يتغير، وبالتالي لا ينكسر ربط
+     بنك الأسئلة أو الامتحانات بالدرس.
+  ========================================================= */
+
+  const startEditLesson = (lesson) => {
+    if (!canManageLessons || !lesson?.id) return;
+
+    setEditingLessonId(lesson.id);
+    setEditingLessonTitle(lesson.title || "");
+  };
+
+  const cancelEditLesson = () => {
+    if (savingLessonTitle) return;
+
+    setEditingLessonId(null);
+    setEditingLessonTitle("");
+  };
+
+  const handleUpdateLessonTitle = async (lessonId) => {
+    if (!canManageLessons || !lessonId) return;
+
+    const newTitle = editingLessonTitle.trim();
+
+    if (!newTitle) {
+      alert("من فضلك اكتب اسم الدرس.");
+      return;
+    }
+
+    setSavingLessonTitle(true);
+
+    try {
+      const lessonRef = doc(db, "lessons", lessonId);
+
+      await updateDoc(lessonRef, {
+        title: newTitle,
+        updatedAt: serverTimestamp(),
+      });
+
+      setEditingLessonId(null);
+      setEditingLessonTitle("");
+    } catch (error) {
+      console.error(
+        "Update lesson title error:",
+        error
+      );
+
+      alert("حدث خطأ أثناء تعديل اسم الدرس.");
+    } finally {
+      setSavingLessonTitle(false);
+    }
+  };
+
+  /* =========================================================
      DELETE LESSON
 
      الحذف يتم من:
@@ -491,14 +552,16 @@ export default function LessonsView() {
               {/* ================= فتح الدرس ================= */}
 
               <div
-                onClick={() =>
-                  openLesson(
-                    lesson
-                  )
-                }
+                onClick={() => {
+                  if (editingLessonId !== lesson.id) {
+                    openLesson(lesson);
+                  }
+                }}
                 style={{
                   cursor:
-                    "pointer",
+                    editingLessonId === lesson.id
+                      ? "default"
+                      : "pointer",
                 }}
               >
 
@@ -506,9 +569,53 @@ export default function LessonsView() {
                   {index + 1}
                 </div>
 
-                <h3 className="lesson-title">
-                  {lesson.title}
-                </h3>
+                {editingLessonId === lesson.id ? (
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <input
+                      type="text"
+                      value={editingLessonTitle}
+                      onChange={(e) =>
+                        setEditingLessonTitle(
+                          e.target.value
+                        )
+                      }
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter") {
+                          handleUpdateLessonTitle(
+                            lesson.id
+                          );
+                        }
+
+                        if (e.key === "Escape") {
+                          cancelEditLesson();
+                        }
+                      }}
+                      autoFocus
+                      disabled={savingLessonTitle}
+                      className="lesson-title-edit-input"
+                      placeholder="اسم الدرس"
+                      style={{
+                        width: "100%",
+                        maxWidth: "500px",
+                        padding: "10px 14px",
+                        marginTop: "8px",
+                        borderRadius: "8px",
+                        border: "1px solid #ffd700",
+                        background: "#111",
+                        color: "#fff",
+                        textAlign: "center",
+                        outline: "none",
+                        boxSizing: "border-box",
+                      }}
+                    />
+                  </div>
+                ) : (
+                  <h3 className="lesson-title">
+                    {lesson.title}
+                  </h3>
+                )}
 
               </div>
 
@@ -518,33 +625,89 @@ export default function LessonsView() {
 
                 {/* ================= START ================= */}
 
-                <button
-                  className="lesson-start-btn"
-                  onClick={() =>
-                    openLesson(
-                      lesson
-                    )
-                  }
-                >
-                  ▶ ابدأ
-                </button>
+                {editingLessonId !== lesson.id && (
+                  <button
+                    className="lesson-start-btn"
+                    onClick={() =>
+                      openLesson(lesson)
+                    }
+                  >
+                    ▶ ابدأ
+                  </button>
+                )}
+
+                {/* ================= EDIT TITLE ================= */}
+
+                {canManageLessons &&
+                  editingLessonId !== lesson.id && (
+                    <button
+                      className="lesson-start-btn"
+                      onClick={() =>
+                        startEditLesson(lesson)
+                      }
+                      style={{
+                        borderColor: "#3b82f6",
+                        color: "#3b82f6",
+                      }}
+                      title="تعديل اسم الدرس"
+                    >
+                      ✏️ تعديل الاسم
+                    </button>
+                  )}
+
+                {canManageLessons &&
+                  editingLessonId === lesson.id && (
+                    <>
+                      <button
+                        className="lesson-start-btn"
+                        onClick={() =>
+                          handleUpdateLessonTitle(
+                            lesson.id
+                          )
+                        }
+                        disabled={savingLessonTitle}
+                        style={{
+                          borderColor: "#22c55e",
+                          color: "#22c55e",
+                          opacity: savingLessonTitle
+                            ? 0.6
+                            : 1,
+                        }}
+                      >
+                        {savingLessonTitle
+                          ? "⏳ جارٍ الحفظ..."
+                          : "💾 حفظ"}
+                      </button>
+
+                      <button
+                        className="lesson-delete-btn"
+                        onClick={cancelEditLesson}
+                        disabled={savingLessonTitle}
+                        style={{
+                          background: "#555",
+                          borderColor: "#777",
+                        }}
+                      >
+                        إلغاء
+                      </button>
+                    </>
+                  )}
 
                 {/* ================= DELETE ================= */}
 
-                {canManageLessons && (
-
-                  <button
-                    className="lesson-delete-btn"
-                    onClick={() =>
-                      handleDeleteLesson(
-                        lesson.id
-                      )
-                    }
-                  >
-                    🗑 حذف الدرس
-                  </button>
-
-                )}
+                {canManageLessons &&
+                  editingLessonId !== lesson.id && (
+                    <button
+                      className="lesson-delete-btn"
+                      onClick={() =>
+                        handleDeleteLesson(
+                          lesson.id
+                        )
+                      }
+                    >
+                      🗑 حذف الدرس
+                    </button>
+                  )}
 
                 {/* ================= LIVE ================= */}
 

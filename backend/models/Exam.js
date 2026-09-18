@@ -66,6 +66,24 @@ const questionSchema = new mongoose.Schema(
 
     /*
     ==============================
+    صورة أو خريطة مرتبطة بالسؤال
+    ==============================
+    
+    يتم حفظ رابط الصورة المرفوعة من
+    Teacher / Admin / Super Admin.
+
+    مثال:
+    /uploads/question-image-123.jpg
+    */
+
+    imageUrl: {
+      type: String,
+      default: "",
+      trim: true,
+    },
+
+    /*
+    ==============================
     نوع السؤال
     ==============================
 
@@ -228,13 +246,40 @@ const examSchema = new mongoose.Schema(
 
     /*
     ==============================
-    المادة
+    المادة - الاسم
     ==============================
     */
 
     subject: {
       type: String,
       default: "",
+    },
+
+    /*
+    ==============================
+    معرف المادة
+    ==============================
+
+    نحتفظ به منفصلًا عن اسم المادة
+    حتى يكون الربط مع Firestore واضحًا.
+    */
+
+    subjectId: {
+      type: String,
+      default: "",
+      index: true,
+    },
+
+    /*
+    ==============================
+    النظام الدراسي
+    ==============================
+    */
+
+    systemId: {
+      type: String,
+      default: "",
+      index: true,
     },
 
     /*
@@ -262,9 +307,102 @@ const examSchema = new mongoose.Schema(
     },
 
     /*
+    ======================================================
+    نطاق الامتحان
+    ======================================================
+
+    lesson
+      امتحان على درس / دروس
+
+    unit
+      امتحان على وحدة / وحدات
+
+    half
+      امتحان على نصف المنهج
+
+    full
+      امتحان شامل على المنهج
+
+    custom
+      امتحان مخصص يجمع بين وحدات ودروس
+    */
+
+    examScope: {
+      type: String,
+      enum: [
+        "lesson",
+        "unit",
+        "half",
+        "full",
+        "custom",
+      ],
+      default: "lesson",
+      index: true,
+    },
+
+    /*
+    ======================================================
+    الوحدات المختارة
+    ======================================================
+
+    يسمح النظام بحد أقصى 3 وحدات.
+
+    مثال:
+
+    [
+      "unit-1",
+      "unit-2",
+      "unit-3"
+    ]
+    */
+
+    selectedUnitIds: {
+      type: [String],
+      default: [],
+      validate: {
+        validator: function (value) {
+          return Array.isArray(value) && value.length <= 3;
+        },
+        message:
+          "يمكن اختيار 3 وحدات كحد أقصى للامتحان.",
+      },
+    },
+
+    /*
+    ======================================================
+    الدروس المختارة
+    ======================================================
+
+    يسمح النظام بحد أقصى 3 دروس.
+
+    مثال:
+
+    [
+      "lesson-1",
+      "lesson-5",
+      "lesson-9"
+    ]
+    */
+
+    selectedLessonIds: {
+      type: [String],
+      default: [],
+      validate: {
+        validator: function (value) {
+          return Array.isArray(value) && value.length <= 3;
+        },
+        message:
+          "يمكن اختيار 3 دروس كحد أقصى للامتحان.",
+      },
+    },
+
+    /*
     ==============================
-    الوحدة
+    الوحدة الرئيسية القديمة
     ==============================
+
+    نحتفظ بها حتى لا تتأثر
+    الامتحانات القديمة.
     */
 
     unitId: {
@@ -469,7 +607,9 @@ const examSchema = new mongoose.Schema(
 
 examSchema.pre("save", function () {
   /*
+  ==============================
   تحديث عدد الأسئلة تلقائيًا
+  ==============================
   */
 
   this.questionsCount = Array.isArray(this.questions)
@@ -477,13 +617,42 @@ examSchema.pre("save", function () {
     : 0;
 
   /*
+  ==============================
   التأكد من أن ترقيم الأسئلة يبدأ من 1
+  ==============================
   */
 
   if (Array.isArray(this.questions)) {
     this.questions.forEach((question, index) => {
       question.questionNumber = index + 1;
     });
+  }
+
+  /*
+  ======================================================
+  حماية إضافية لنطاق الامتحان
+  ======================================================
+
+  لا نسمح بأكثر من 3 وحدات
+  أو أكثر من 3 دروس.
+  */
+
+  if (
+    Array.isArray(this.selectedUnitIds) &&
+    this.selectedUnitIds.length > 3
+  ) {
+    throw new Error(
+      "يمكن اختيار 3 وحدات كحد أقصى للامتحان."
+    );
+  }
+
+  if (
+    Array.isArray(this.selectedLessonIds) &&
+    this.selectedLessonIds.length > 3
+  ) {
+    throw new Error(
+      "يمكن اختيار 3 دروس كحد أقصى للامتحان."
+    );
   }
 });
 
@@ -501,6 +670,13 @@ examSchema.index({
 examSchema.index({
   creationSource: 1,
   createdAt: -1,
+});
+
+examSchema.index({
+  gradeId: 1,
+  subjectId: 1,
+  examScope: 1,
+  status: 1,
 });
 
 

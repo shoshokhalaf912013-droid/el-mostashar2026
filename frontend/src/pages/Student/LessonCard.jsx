@@ -1,26 +1,27 @@
 import PropTypes from "prop-types";
-import { useNavigate, useParams } from "react-router-dom";
 import { useState } from "react";
-
-import { db } from "@/firebase";
-import { doc, updateDoc, deleteDoc } from "firebase/firestore";
-
+import { useNavigate, useParams } from "react-router-dom";
+import { doc, updateDoc } from "firebase/firestore";
+import { db } from "../../firebase";
 import "./LessonCard.css";
 
 export default function LessonCard({
   lesson,
   index,
-  canEdit = false,
-  canDelete = false
+  onDelete,
 }) {
-
   const navigate = useNavigate();
   const { gradeId, subjectId, unitId } = useParams();
 
-  const [editing, setEditing] = useState(false);
-  const [title, setTitle] = useState(lesson.title || "درس جديد");
+  const [isEditing, setIsEditing] = useState(false);
+  const [editedTitle, setEditedTitle] = useState(
+    lesson.title || ""
+  );
+  const [savingTitle, setSavingTitle] = useState(false);
 
-  /* ================= OPEN LESSON ================= */
+  const [displayTitle, setDisplayTitle] = useState(
+    lesson.title || ""
+  );
 
   const goToLesson = () => {
     navigate(
@@ -28,103 +29,296 @@ export default function LessonCard({
     );
   };
 
-  /* ================= EDIT ================= */
+  /* =========================
+     بدء تعديل اسم الدرس
+  ========================= */
 
-  const saveTitle = async () => {
-    if (!title.trim()) return;
-
-    try {
-      await updateDoc(doc(db, "lessons", lesson.id), {
-        title: title.trim()
-      });
-
-      setEditing(false);
-    } catch (err) {
-      console.error("Update lesson error:", err);
-    }
-  };
-
-  /* ================= DELETE ================= */
-
-  const deleteLesson = async (e) => {
+  const startEditing = (e) => {
     e.stopPropagation();
 
-    const confirmDelete = window.confirm("هل تريد حذف الدرس؟");
-    if (!confirmDelete) return;
+    setEditedTitle(
+      displayTitle || lesson.title || ""
+    );
+
+    setIsEditing(true);
+  };
+
+  /* =========================
+     إلغاء تعديل الاسم
+  ========================= */
+
+  const cancelEditing = (e) => {
+    e.stopPropagation();
+
+    setEditedTitle(
+      displayTitle || lesson.title || ""
+    );
+
+    setIsEditing(false);
+  };
+
+  /* =========================
+     حفظ اسم الدرس في Firestore
+  ========================= */
+
+  const saveLessonTitle = async (e) => {
+    e.stopPropagation();
+
+    const newTitle = editedTitle.trim();
+
+    if (!newTitle) {
+      alert("من فضلك أدخل اسم الدرس.");
+      return;
+    }
+
+    if (!lesson.id) {
+      alert("تعذر تحديد رقم الدرس.");
+      return;
+    }
+
+    setSavingTitle(true);
 
     try {
-      await deleteDoc(doc(db, "lessons", lesson.id));
-    } catch (err) {
-      console.error("Delete lesson error:", err);
+      const lessonRef = doc(
+        db,
+        "lessons",
+        String(lesson.id)
+      );
+
+      await updateDoc(lessonRef, {
+        title: newTitle,
+      });
+
+      setDisplayTitle(newTitle);
+      setEditedTitle(newTitle);
+      setIsEditing(false);
+
+      alert("تم تعديل اسم الدرس وحفظه بنجاح.");
+    } catch (error) {
+      console.error(
+        "❌ Error updating lesson title:",
+        error
+      );
+
+      alert(
+        "حدث خطأ أثناء حفظ اسم الدرس. تأكد من صلاحيات Firestore."
+      );
+    } finally {
+      setSavingTitle(false);
     }
   };
 
-  /* ================= UI ================= */
+  /* =========================
+     حذف الدرس
+  ========================= */
+
+  const handleDelete = (e) => {
+    e.stopPropagation();
+
+    if (!onDelete) return;
+
+    if (
+      window.confirm(
+        "هل أنت متأكد من حذف هذا الدرس؟"
+      )
+    ) {
+      onDelete(lesson.id);
+    }
+  };
 
   return (
-    <div className="lesson-card" onClick={goToLesson}>
+    <div
+      className="lesson-card"
+      onClick={goToLesson}
+    >
+      {/* =========================
+          رقم الدرس
+      ========================= */}
 
-      {/* رقم الدرس */}
       <div className="lesson-index">
         {index + 1}
       </div>
 
-      {/* أزرار التحكم */}
-      {(canEdit || canDelete) && (
-        <div
-          className="lesson-actions"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {canEdit && (
-            <button
-              className="edit-btn"
-              onClick={() => setEditing(true)}
-            >
-              ✏
-            </button>
-          )}
+      {/* =========================
+          محتوى الدرس
+      ========================= */}
 
-          {canDelete && (
-            <button
-              className="delete-btn"
-              onClick={deleteLesson}
-            >
-              🗑
-            </button>
-          )}
-        </div>
-      )}
+      <div
+        className="lesson-title-box"
+        style={{
+          animationDelay: `${index * 6}s`,
+        }}
+      >
+        {/* =========================
+            اسم الدرس
+        ========================= */}
 
-      {/* المحتوى */}
-      <div className="lesson-content">
-
-        {editing ? (
-          <input
-            className="lesson-edit-input"
-            value={title}
-            autoFocus
-            onChange={(e) => setTitle(e.target.value)}
-            onBlur={saveTitle}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") saveTitle();
+        {isEditing ? (
+          <div
+            style={{
+              width: "100%",
+              display: "flex",
+              flexDirection: "column",
+              alignItems: "center",
+              gap: "10px",
             }}
-          />
+            onClick={(e) =>
+              e.stopPropagation()
+            }
+          >
+            <input
+              type="text"
+              value={editedTitle}
+              onChange={(e) =>
+                setEditedTitle(
+                  e.target.value
+                )
+              }
+              onClick={(e) =>
+                e.stopPropagation()
+              }
+              onKeyDown={(e) => {
+                if (e.key === "Enter") {
+                  saveLessonTitle(e);
+                }
+
+                if (e.key === "Escape") {
+                  cancelEditing(e);
+                }
+              }}
+              autoFocus
+              disabled={savingTitle}
+              style={{
+                width: "100%",
+                maxWidth: "500px",
+                padding: "10px 14px",
+                borderRadius: "8px",
+                border:
+                  "1px solid #ffd700",
+                background: "#111",
+                color: "#fff",
+                textAlign: "center",
+                outline: "none",
+                boxSizing: "border-box",
+              }}
+            />
+
+            <div
+              style={{
+                display: "flex",
+                gap: "8px",
+                justifyContent:
+                  "center",
+                flexWrap: "wrap",
+              }}
+            >
+              <button
+                type="button"
+                onClick={saveLessonTitle}
+                disabled={savingTitle}
+                style={{
+                  padding:
+                    "7px 16px",
+                  borderRadius: "8px",
+                  border: "none",
+                  background:
+                    "#16a34a",
+                  color: "#fff",
+                  cursor: savingTitle
+                    ? "not-allowed"
+                    : "pointer",
+                  opacity: savingTitle
+                    ? 0.6
+                    : 1,
+                }}
+              >
+                {savingTitle
+                  ? "⏳ جارٍ الحفظ..."
+                  : "💾 حفظ"}
+              </button>
+
+              <button
+                type="button"
+                onClick={cancelEditing}
+                disabled={savingTitle}
+                style={{
+                  padding:
+                    "7px 16px",
+                  borderRadius: "8px",
+                  border: "none",
+                  background:
+                    "#555",
+                  color: "#fff",
+                  cursor: "pointer",
+                }}
+              >
+                إلغاء
+              </button>
+            </div>
+          </div>
         ) : (
-          <h3 className="lesson-title">{title}</h3>
+          <span className="lesson-title">
+            {displayTitle || "بدون اسم"}
+          </span>
         )}
 
-        <button
-          className="start-btn"
-          onClick={(e) => {
-            e.stopPropagation();
-            goToLesson();
-          }}
-        >
-          ▶ ابدأ
-        </button>
+        {/* =========================
+            ابدأ
+        ========================= */}
 
+        {!isEditing && (
+          <button
+            className="start-lesson-btn"
+            onClick={(e) => {
+              e.stopPropagation();
+              goToLesson();
+            }}
+          >
+            ▶ ابدأ
+          </button>
+        )}
+
+        {/* =========================
+            تعديل الاسم
+        ========================= */}
+
+        {!isEditing && (
+          <button
+            type="button"
+            className="edit-lesson-btn"
+            onClick={startEditing}
+            title="تعديل اسم الدرس"
+            style={{
+              padding: "7px 14px",
+              borderRadius: "8px",
+              border:
+                "1px solid #3b82f6",
+              background:
+                "#2563eb",
+              color: "#fff",
+              cursor: "pointer",
+              fontSize: "13px",
+            }}
+          >
+            ✏️ تعديل الاسم
+          </button>
+        )}
+
+        {/* =========================
+            حذف
+        ========================= */}
+
+        {onDelete && !isEditing && (
+          <button
+            className="delete-lesson-btn"
+            onClick={handleDelete}
+          >
+            🗑️
+          </button>
+        )}
+
+        <span className="lesson-shooting" />
       </div>
-
     </div>
   );
 }
@@ -132,6 +326,5 @@ export default function LessonCard({
 LessonCard.propTypes = {
   lesson: PropTypes.object.isRequired,
   index: PropTypes.number.isRequired,
-  canEdit: PropTypes.bool,
-  canDelete: PropTypes.bool,
+  onDelete: PropTypes.func,
 };

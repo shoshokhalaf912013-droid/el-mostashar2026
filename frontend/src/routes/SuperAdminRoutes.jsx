@@ -56,6 +56,15 @@ import RequireRole
 
 /*
 ========================================================
+QUESTION BANK
+========================================================
+*/
+
+import QuestionBank
+  from "../pages/superadmin/QuestionBank";
+
+/*
+========================================================
 EXAM ENGINE
 ========================================================
 */
@@ -161,6 +170,17 @@ export default function SuperAdminRoutes() {
           path="manage-exams"
           element={
             <ManageExams />
+          }
+        />
+
+        {/* =========================
+            QUESTION BANK
+        ========================= */}
+
+        <Route
+          path="question-bank"
+          element={
+            <QuestionBank />
           }
         />
 

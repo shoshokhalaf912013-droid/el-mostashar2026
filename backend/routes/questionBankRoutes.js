@@ -47,6 +47,7 @@ router.get("/", async (req, res) => {
     }
 
     const pageNumber = Math.max(Number(page), 1);
+
     const limitNumber = Math.min(
       Math.max(Number(limit), 1),
       200
@@ -134,27 +135,41 @@ router.post("/", async (req, res) => {
   try {
     const {
       questionText,
+
       type = "mcq",
+
       choices = [],
+
+      choiceLayout = "vertical",
+
       correctAnswer = null,
+
       modelAnswer = "",
+
       gradingCriteria = [],
+
       marks = 1,
 
       stageId = "",
+
       gradeId = "",
+
       subjectId = "",
+
       unitId = "",
+
       lessonId = "",
 
       difficulty = "medium",
 
       source = "teacher",
+
       sourceName = "",
 
       explanation = "",
 
       aiGenerated = false,
+
       aiReviewed = false,
 
       active = true,
@@ -174,7 +189,9 @@ router.post("/", async (req, res) => {
       });
     }
 
-    if (!["mcq", "essay"].includes(type)) {
+    if (
+      !["mcq", "essay"].includes(type)
+    ) {
       return res.status(400).json({
         success: false,
         error:
@@ -276,6 +293,17 @@ router.post("/", async (req, res) => {
             ? choices
             : [],
 
+        choiceLayout:
+          type === "mcq"
+            ? [
+                "vertical",
+                "row4",
+                "grid2x2",
+              ].includes(choiceLayout)
+              ? choiceLayout
+              : "vertical"
+            : "vertical",
+
         correctAnswer:
           type === "mcq"
             ? correctAnswer
@@ -294,19 +322,25 @@ router.post("/", async (req, res) => {
         marks,
 
         stageId,
+
         gradeId,
+
         subjectId,
+
         unitId,
+
         lessonId,
 
         difficulty,
 
         source,
+
         sourceName,
 
         explanation,
 
         aiGenerated,
+
         aiReviewed,
 
         normalizedText,
@@ -355,27 +389,41 @@ router.put("/:id", async (req, res) => {
 
     const allowedFields = [
       "questionText",
+
       "type",
+
       "choices",
+
+      "choiceLayout",
+
       "correctAnswer",
+
       "modelAnswer",
+
       "gradingCriteria",
+
       "marks",
 
       "stageId",
+
       "gradeId",
+
       "subjectId",
+
       "unitId",
+
       "lessonId",
 
       "difficulty",
 
       "source",
+
       "sourceName",
 
       "explanation",
 
       "aiGenerated",
+
       "aiReviewed",
 
       "active",
@@ -396,6 +444,20 @@ router.put("/:id", async (req, res) => {
           .replace(/\s+/g, " ")
           .trim()
           .toLowerCase();
+    }
+
+    if (
+      question.type === "mcq" &&
+      ![
+        "vertical",
+        "row4",
+        "grid2x2",
+      ].includes(
+        question.choiceLayout
+      )
+    ) {
+      question.choiceLayout =
+        "vertical";
     }
 
     await question.save();
@@ -467,134 +529,150 @@ router.delete("/:id", async (req, res) => {
 // POST — اختيار أسئلة عشوائية من درس
 // ======================================================
 
-router.post("/random/select", async (req, res) => {
-  try {
-    const {
-      lessonId,
-      count = 10,
-      type,
-      difficulty,
-      excludeIds = [],
-    } = req.body;
+router.post(
+  "/random/select",
+  async (req, res) => {
+    try {
+      const {
+        lessonId,
 
-    if (!lessonId) {
-      return res.status(400).json({
+        count = 10,
+
+        type,
+
+        difficulty,
+
+        excludeIds = [],
+      } = req.body;
+
+      if (!lessonId) {
+        return res.status(400).json({
+          success: false,
+          error: "lessonId مطلوب.",
+        });
+      }
+
+      const number =
+        Math.max(Number(count), 1);
+
+      const filter = {
+        lessonId,
+
+        active: true,
+      };
+
+      if (type) {
+        filter.type = type;
+      }
+
+      if (difficulty) {
+        filter.difficulty =
+          difficulty;
+      }
+
+      if (
+        Array.isArray(excludeIds) &&
+        excludeIds.length > 0
+      ) {
+        filter._id = {
+          $nin: excludeIds,
+        };
+      }
+
+      const questions =
+        await QuestionBank.aggregate([
+          {
+            $match: filter,
+          },
+
+          {
+            $sample: {
+              size: number,
+            },
+          },
+        ]);
+
+      res.json({
+        success: true,
+        count: questions.length,
+        questions,
+      });
+    } catch (err) {
+      console.error(
+        "Question Bank RANDOM error:",
+        err
+      );
+
+      res.status(500).json({
         success: false,
-        error: "lessonId مطلوب.",
+        error: err.message,
       });
     }
-
-    const number =
-      Math.max(Number(count), 1);
-
-    const filter = {
-      lessonId,
-      active: true,
-    };
-
-    if (type) {
-      filter.type = type;
-    }
-
-    if (difficulty) {
-      filter.difficulty =
-        difficulty;
-    }
-
-    if (
-      Array.isArray(excludeIds) &&
-      excludeIds.length > 0
-    ) {
-      filter._id = {
-        $nin: excludeIds,
-      };
-    }
-
-    const questions =
-      await QuestionBank.aggregate([
-        {
-          $match: filter,
-        },
-
-        {
-          $sample: {
-            size: number,
-          },
-        },
-      ]);
-
-    res.json({
-      success: true,
-      count: questions.length,
-      questions,
-    });
-  } catch (err) {
-    console.error(
-      "Question Bank RANDOM error:",
-      err
-    );
-
-    res.status(500).json({
-      success: false,
-      error: err.message,
-    });
   }
-});
+);
 
 // ======================================================
 // POST — تسجيل استخدام الأسئلة
 // ======================================================
 
-router.post("/mark-used", async (req, res) => {
-  try {
-    const {
-      questionIds = [],
-    } = req.body;
+router.post(
+  "/mark-used",
+  async (req, res) => {
+    try {
+      const {
+        questionIds = [],
+      } = req.body;
 
-    if (
-      !Array.isArray(questionIds) ||
-      questionIds.length === 0
-    ) {
-      return res.status(400).json({
+      if (
+        !Array.isArray(questionIds) ||
+        questionIds.length === 0
+      ) {
+        return res.status(400).json({
+          success: false,
+          error:
+            "questionIds مطلوب.",
+        });
+      }
+
+      await QuestionBank.updateMany(
+        {
+          _id: {
+            $in: questionIds,
+          },
+        },
+
+        {
+          $inc: {
+            usageCount: 1,
+          },
+
+          $set: {
+            lastUsedAt: new Date(),
+          },
+        }
+      );
+
+      res.json({
+        success: true,
+        message:
+          "تم تسجيل استخدام الأسئلة.",
+      });
+    } catch (err) {
+      console.error(
+        "Question Bank MARK USED error:",
+        err
+      );
+
+      res.status(500).json({
         success: false,
-        error:
-          "questionIds مطلوب.",
+        error: err.message,
       });
     }
-
-    await QuestionBank.updateMany(
-      {
-        _id: {
-          $in: questionIds,
-        },
-      },
-      {
-        $inc: {
-          usageCount: 1,
-        },
-
-        $set: {
-          lastUsedAt: new Date(),
-        },
-      }
-    );
-
-    res.json({
-      success: true,
-      message:
-        "تم تسجيل استخدام الأسئلة.",
-    });
-  } catch (err) {
-    console.error(
-      "Question Bank MARK USED error:",
-      err
-    );
-
-    res.status(500).json({
-      success: false,
-      error: err.message,
-    });
   }
-});
+);
+
+// ======================================================
+// EXPORT
+// ======================================================
 
 module.exports = router;
