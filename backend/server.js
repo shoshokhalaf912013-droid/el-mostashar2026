@@ -18,6 +18,7 @@ const fs = require("fs");
 const path = require("path");
 const http = require("http");
 const mongoose = require("mongoose");
+const crypto = require("crypto");
 
 
 // ==============================
@@ -26,30 +27,119 @@ const mongoose = require("mongoose");
 
 const admin = require("firebase-admin");
 
-const serviceAccountPath = path.resolve(
-  process.env.SERVICE_ACCOUNT_KEY
-);
+// ------------------------------------------------------------
+// FIREBASE SERVICE ACCOUNT
+// ------------------------------------------------------------
+// Local development:
+//   SERVICE_ACCOUNT_KEY points to the JSON file on the PC.
+//
+// Vercel / production:
+//   FIREBASE_SERVICE_ACCOUNT_JSON contains the full service
+//   account JSON as an environment variable, so no credential
+//   file has to be committed to GitHub.
+// ------------------------------------------------------------
 
-if (!fs.existsSync(serviceAccountPath)) {
+let serviceAccount = null;
+
+if (
+  process.env.FIREBASE_SERVICE_ACCOUNT_JSON
+) {
+
+  try {
+
+    serviceAccount =
+      JSON.parse(
+        process.env.FIREBASE_SERVICE_ACCOUNT_JSON
+      );
+
+    if (
+      serviceAccount &&
+      typeof serviceAccount.private_key ===
+        "string"
+    ) {
+
+      serviceAccount.private_key =
+        serviceAccount.private_key.replace(
+          /\\n/g,
+          "\n"
+        );
+    }
+
+  } catch (error) {
+
+    console.error(
+      "❌ Invalid FIREBASE_SERVICE_ACCOUNT_JSON:",
+      error.message
+    );
+
+    process.exit(1);
+  }
+
+} else if (
+  process.env.SERVICE_ACCOUNT_KEY
+) {
+
+  const serviceAccountPath =
+    path.resolve(
+      process.env.SERVICE_ACCOUNT_KEY
+    );
+
+  if (
+    !fs.existsSync(
+      serviceAccountPath
+    )
+  ) {
+
+    console.error(
+      "❌ Service Account file not found:",
+      serviceAccountPath
+    );
+
+    process.exit(1);
+  }
+
+  try {
+
+    serviceAccount =
+      require(
+        serviceAccountPath
+      );
+
+  } catch (error) {
+
+    console.error(
+      "❌ Could not load Service Account file:",
+      error.message
+    );
+
+    process.exit(1);
+  }
+
+} else {
 
   console.error(
-    "❌ Service Account file not found:",
-    serviceAccountPath
+    "❌ Firebase credentials are not configured. " +
+      "Set FIREBASE_SERVICE_ACCOUNT_JSON " +
+      "or SERVICE_ACCOUNT_KEY."
   );
 
   process.exit(1);
 }
 
-const serviceAccount = require(
-  serviceAccountPath
-);
+if (
+  !admin.apps.length
+) {
 
-admin.initializeApp({
-  credential:
-    admin.credential.cert(
-      serviceAccount
-    ),
-});
+  admin.initializeApp({
+    credential:
+      admin.credential.cert(
+        serviceAccount
+      ),
+    storageBucket:
+      "el-mostashar2026.firebasestorage.app",
+  });
+
+}
 
 console.log(
   "🔥 Firebase Admin Connected"
@@ -69,26 +159,69 @@ if (!process.env.MONGO_URL) {
   process.exit(1);
 }
 
-mongoose
-  .connect(
-    process.env.MONGO_URL
-  )
-  .then(() => {
+// Vercel / serverless-safe connection manager.
+// The first request may arrive before the initial connection
+// has finished, so all callers share and await the same Promise.
+let mongoConnectionPromise = null;
 
-    console.log(
-      "🍃 MongoDB Connected"
-    );
+const connectMongo = async () => {
 
-  })
-  .catch((error) => {
+  if (
+    mongoose.connection.readyState === 1
+  ) {
 
-    console.error(
-      "❌ MongoDB Connection Error:",
-      error.message
-    );
+    return mongoose.connection;
+  }
 
-    process.exit(1);
-  });
+  if (!mongoConnectionPromise) {
+
+    mongoConnectionPromise =
+      mongoose
+        .connect(
+          process.env.MONGO_URL,
+          {
+            // Atlas/Vercel connectivity can prefer IPv6 on
+            // modern Node runtimes; force IPv4 for consistency.
+            family: 4,
+
+            // Fail fast enough for a serverless request while
+            // still allowing normal Atlas startup latency.
+            serverSelectionTimeoutMS: 10000,
+            connectTimeoutMS: 10000,
+
+            // Avoid keeping idle connections around forever.
+            maxIdleTimeMS: 60000,
+          }
+        )
+        .then(() => {
+
+          console.log(
+            "🍃 MongoDB Connected"
+          );
+
+          return mongoose.connection;
+
+        })
+        .catch((error) => {
+
+          console.error(
+            "❌ MongoDB Connection Error:",
+            error.message
+          );
+
+          // Allow a later invocation to retry cleanly.
+          mongoConnectionPromise = null;
+
+          throw error;
+        });
+  }
+
+  return mongoConnectionPromise;
+};
+
+// MongoDB is a startup dependency for all Mongo-backed routes.
+// The HTTP server must not accept requests until the initial
+// connection has completed successfully.
 
 
 // ==============================
@@ -102,11 +235,57 @@ const app = express();
 //         MIDDLEWARE
 // ==============================
 
+const allowedCorsOrigins = new Set([
+  "https://el-mostashar2026.web.app",
+  "https://el-mostashar2026.firebaseapp.com",
+  "https://el-mostashar.com",
+  "http://localhost:5173",
+  "http://localhost:5174",
+]);
+
 app.use(
   cors({
-    origin: "*",
+    origin: (origin, callback) => {
+
+      if (!origin || allowedCorsOrigins.has(origin)) {
+        return callback(null, true);
+      }
+
+      return callback(null, false);
+    },
+
+    credentials: true,
+
+    methods: [
+      "GET",
+      "HEAD",
+      "POST",
+      "PUT",
+      "PATCH",
+      "DELETE",
+      "OPTIONS",
+    ],
+
+    allowedHeaders: [
+      "Content-Type",
+      "Authorization",
+      "X-Requested-With",
+      "Accept",
+    ],
   })
 );
+
+app.options("*", cors({
+  origin: (origin, callback) => {
+
+    if (!origin || allowedCorsOrigins.has(origin)) {
+      return callback(null, true);
+    }
+
+    return callback(null, false);
+  },
+  credentials: true,
+}));
 
 app.use(
   express.json({
@@ -123,6 +302,24 @@ app.use(
 
 app.use(
   helmet({
+    // The protected video gate is intentionally loaded in an iframe
+    // from the production frontend. Allow that frontend to frame the
+    // backend gate while keeping framing restricted to our own origins.
+    contentSecurityPolicy: {
+      directives: {
+        frameAncestors: [
+          "'self'",
+          "https://el-mostashar2026.web.app",
+          "https://el-mostashar2026.firebaseapp.com",
+          "https://el-mostashar.com",
+        ],
+      },
+    },
+
+    // X-Frame-Options cannot express a cross-origin allowlist.
+    // The CSP frame-ancestors directive above is the modern control.
+    xFrameOptions: false,
+
     crossOriginEmbedderPolicy: false,
   })
 );
@@ -379,42 +576,6 @@ io.on(
       }
     );
   }
-);
-
-
-// ==============================
-//       UPLOADS FOLDER
-// ==============================
-
-const uploadsPath =
-  path.join(
-    __dirname,
-    "uploads"
-  );
-
-if (
-  !fs.existsSync(
-    uploadsPath
-  )
-) {
-
-  fs.mkdirSync(
-    uploadsPath,
-    {
-      recursive: true,
-    }
-  );
-
-  console.log(
-    "📁 uploads folder created"
-  );
-}
-
-app.use(
-  "/uploads",
-  express.static(
-    uploadsPath
-  )
 );
 
 
@@ -687,26 +848,54 @@ app.get(
 
 app.get(
   "/api/health",
-  (req, res) => {
+  async (req, res) => {
 
-    res.json({
+    try {
 
-      success:
-        true,
+      await connectMongo();
 
-      server:
-        "online",
+      return res.json({
 
-      mongodb:
-        mongoose.connection
-          .readyState === 1
-          ? "connected"
-          : "disconnected",
+        success:
+          true,
 
-      timestamp:
-        new Date().toISOString(),
+        server:
+          "online",
 
-    });
+        mongodb:
+          "connected",
+
+        timestamp:
+          new Date().toISOString(),
+
+      });
+
+    } catch (error) {
+
+      console.error(
+        "❌ Health MongoDB check failed:",
+        error.message
+      );
+
+      return res.status(503).json({
+
+        success:
+          false,
+
+        server:
+          "online",
+
+        mongodb:
+          "disconnected",
+
+        error:
+          error.message,
+
+        timestamp:
+          new Date().toISOString(),
+
+      });
+    }
   }
 );
 
@@ -719,54 +908,17 @@ const multer =
   require("multer");
 
 const storage =
-  multer.diskStorage({
-
-    destination:
-      function (
-        req,
-        file,
-        cb
-      ) {
-
-        cb(
-          null,
-          uploadsPath
-        );
-      },
-
-
-    filename:
-      function (
-        req,
-        file,
-        cb
-      ) {
-
-        const uniqueName =
-          Date.now() +
-          "-" +
-          Math.round(
-            Math.random() *
-              1e9
-          );
-
-        cb(
-          null,
-
-          uniqueName +
-            path.extname(
-              file.originalname
-            )
-        );
-      },
-
-  });
-
+  admin
+    .storage()
+    .bucket(
+      "el-mostashar2026.firebasestorage.app"
+    );
 
 const upload =
   multer({
 
-    storage,
+    storage:
+      multer.memoryStorage(),
 
     limits: {
 
@@ -787,7 +939,7 @@ app.post(
     "file"
   ),
 
-  (req, res) => {
+  async (req, res) => {
 
     try {
 
@@ -806,6 +958,46 @@ app.post(
           });
       }
 
+      const uniqueName =
+        Date.now() +
+        "-" +
+        Math.round(
+          Math.random() *
+            1e9
+        ) +
+        path.extname(
+          req.file.originalname
+        );
+
+      const storagePath =
+        `uploads/${uniqueName}`;
+
+      const storageFile =
+        storage.file(
+          storagePath
+        );
+
+      const downloadToken =
+        crypto.randomUUID();
+
+      await storageFile.save(
+        req.file.buffer,
+        {
+          resumable: false,
+          metadata: {
+            contentType:
+              req.file.mimetype ||
+              "application/octet-stream",
+            metadata: {
+              firebaseStorageDownloadTokens:
+                downloadToken,
+            },
+          },
+        }
+      );
+
+      const fileUrl =
+        `https://firebasestorage.googleapis.com/v0/b/${storage.name}/o/${encodeURIComponent(storagePath)}?alt=media&token=${downloadToken}`;
 
       res.json({
 
@@ -813,23 +1005,18 @@ app.post(
           true,
 
         fileName:
-          req.file
-            .filename,
+          uniqueName,
 
         originalName:
-          req.file
-            .originalname,
+          req.file.originalname,
 
-        fileUrl:
-          `/uploads/${req.file.filename}`,
+        fileUrl,
 
         size:
-          req.file
-            .size,
+          req.file.size,
 
         mimeType:
-          req.file
-            .mimetype,
+          req.file.mimetype,
 
       });
 
@@ -1188,38 +1375,58 @@ const PORT =
   5000;
 
 
-server.listen(
-  PORT,
-  "0.0.0.0",
-  () => {
+const startServer = async () => {
 
-    console.log(
-      `🚀 Server running on port ${PORT}`
+  try {
+
+    // Do not start accepting HTTP requests until MongoDB is ready.
+    await connectMongo();
+
+    server.listen(
+      PORT,
+      "0.0.0.0",
+      () => {
+
+        console.log(
+          `🚀 Server running on port ${PORT}`
+        );
+
+        console.log(
+          "📡 Socket.IO enabled"
+        );
+
+        console.log(
+          "🎥 LiveKit enabled"
+        );
+
+        console.log(
+          "📝 Exam system enabled"
+        );
+
+        console.log(
+          "📚 Question Bank enabled"
+        );
+
+        console.log(
+          "🔐 Authentication enabled"
+        );
+
+        console.log(
+          "🔒 Protected Video API enabled"
+        );
+
+      }
     );
 
-    console.log(
-      "📡 Socket.IO enabled"
+  } catch (error) {
+
+    console.error(
+      "❌ Server startup aborted because MongoDB is unavailable:",
+      error.message
     );
 
-    console.log(
-      "🎥 LiveKit enabled"
-    );
-
-    console.log(
-      "📝 Exam system enabled"
-    );
-
-    console.log(
-      "📚 Question Bank enabled"
-    );
-
-    console.log(
-      "🔐 Authentication enabled"
-    );
-
-    console.log(
-      "🔒 Protected Video API enabled"
-    );
-
+    process.exit(1);
   }
-);
+};
+
+startServer();
