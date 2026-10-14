@@ -825,7 +825,11 @@ export default function QuestionBank() {
                         setEditingQuestion({
                           ...question,
                           choices: Array.isArray(question.choices)
-                            ? [...question.choices]
+                            ? question.choices.map((choice) =>
+                                typeof choice === "object" && choice !== null
+                                  ? String(choice.text ?? "")
+                                  : String(choice ?? "")
+                              )
                             : ["", "", "", ""],
                           gradingCriteria:
                             Array.isArray(question.gradingCriteria)
@@ -1240,7 +1244,11 @@ function ChoicePreview({
               overflowWrap: "anywhere",
             }}
           >
-            {choice || "—"}
+            {
+              typeof choice === "object" && choice !== null
+                ? choice.text || "—"
+                : choice || "—"
+            }
           </span>
         </div>
       ))}

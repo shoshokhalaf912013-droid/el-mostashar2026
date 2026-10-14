@@ -1,4 +1,4 @@
-// ============================================================
+﻿// ============================================================
 // backend/server.js
 // El-Mostashar Backend
 // ============================================================
@@ -671,6 +671,21 @@ const questionBankRoutes =
 app.use(
   "/api/question-bank",
   questionBankRoutes
+);
+
+
+// ==============================
+//   QUESTION BANK DOCUMENT IMPORT
+// ==============================
+
+const questionBankDocumentImportRoutes =
+  require(
+    "./routes/questionBankDocumentImportRoutes"
+  );
+
+app.use(
+  "/api/question-bank/import",
+  questionBankDocumentImportRoutes
 );
 
 

@@ -1,12 +1,115 @@
-// routes/questionBankRoutes.js
-
 const express = require("express");
 const router = express.Router();
 
 const QuestionBank = require("../models/QuestionBank");
+const { buildImportPreview } = require("../utils/questionImporter");
+
 
 // ======================================================
-// GET — جميع أسئلة بنك الأسئلة
+// ╪»╪╣┘à ╪┤┘â┘ ╪╣╪▒╪╢ ╪د┘╪د╪«╪ز┘è╪د╪▒╪د╪ز
+// vertical = ┘â┘ ╪د╪«╪ز┘è╪د╪▒ ┘┘è ╪│╪╖╪▒
+// row4 = ╪د┘╪ث╪▒╪ذ╪╣╪ر ┘┘è ╪│╪╖╪▒ ┘ê╪د╪ص╪»
+// grid2x2 = ╪د╪«╪ز┘è╪د╪▒╪د┘ ┘┘è ┘â┘ ╪│╪╖╪▒
+// ┘╪╢┘è┘ ╪د┘╪ص┘é┘ ╪ح┘┘ë schema ┘ç┘╪د ┘┘╪ز┘ê╪د┘┘é ┘à╪╣ ╪د┘┘à┘ê╪»┘è┘ ╪د┘╪ص╪د┘┘è.
+// ======================================================
+
+QuestionBank.schema.add({
+  systemId: { type: String, default: "" },
+  importOrder: { type: Number, default: 0 },
+  originalQuestionNumber: { type: String, default: "", trim: true },
+  choiceLayout: {
+    type: String,
+    enum: ["vertical", "row4", "grid2x2"],
+    default: "vertical",
+  },
+});
+
+// ======================================================
+// ╪ص┘é┘ê┘ ╪د┘╪د╪│╪ز┘è╪▒╪د╪» ╪د┘┘à╪ز┘é╪»┘à╪ر
+// ┘à┘ê╪ش┘ê╪»╪ر ╪ذ╪د┘┘╪╣┘ ┘┘è QuestionBank ╪د┘╪ص╪د┘┘è╪î
+// ┘ê┘╪╢┘à┘ ┘ç┘╪د ╪ث┘ ╪د┘┘Route ┘è╪│╪ز┘é╪ذ┘┘ç╪د ┘ê┘è╪ص┘╪╕┘ç╪د ╪ث┘è╪╢┘ï╪د.
+// ======================================================
+
+function normalizeVisualAssets(value) {
+  if (!Array.isArray(value)) return [];
+
+  const allowedTypes = [
+    "map",
+    "portrait",
+    "chart",
+    "table",
+    "diagram",
+    "image",
+    "other",
+  ];
+
+  return value
+    .filter(Boolean)
+    .map((asset, index) => ({
+      type: allowedTypes.includes(asset.type)
+        ? asset.type
+        : "image",
+      url: String(asset.url || "").trim(),
+      fileName: String(asset.fileName || "").trim(),
+      page:
+        Number.isFinite(Number(asset.page)) &&
+        Number(asset.page) >= 1
+          ? Number(asset.page)
+          : null,
+      order:
+        Number.isFinite(Number(asset.order)) &&
+        Number(asset.order) >= 0
+          ? Number(asset.order)
+          : index,
+      caption: String(asset.caption || "").trim(),
+      cropped: Boolean(asset.cropped),
+      crop: {
+        x: Number.isFinite(Number(asset.crop?.x)) ? Number(asset.crop.x) : null,
+        y: Number.isFinite(Number(asset.crop?.y)) ? Number(asset.crop.y) : null,
+        width: Number.isFinite(Number(asset.crop?.width)) ? Number(asset.crop.width) : null,
+        height: Number.isFinite(Number(asset.crop?.height)) ? Number(asset.crop.height) : null,
+      },
+    }));
+}
+
+function normalizeSourceDocument(value) {
+  if (!value || typeof value !== "object") return null;
+
+  return {
+    fileName: String(value.fileName || "").trim(),
+    fileUrl: String(value.fileUrl || "").trim(),
+    pages: Array.isArray(value.pages)
+      ? value.pages
+          .map(Number)
+          .filter((page) => Number.isInteger(page) && page >= 1)
+      : [],
+    referenceText: String(value.referenceText || "").trim(),
+    curriculumOnly:
+      value.curriculumOnly === undefined
+        ? true
+        : Boolean(value.curriculumOnly),
+  };
+}
+
+function normalizeSourcePage(value) {
+  if (!value || typeof value !== "object") return null;
+
+  const pageNumber = Number(value.pageNumber);
+
+  return {
+    fileName: String(value.fileName || "").trim(),
+    pageNumber:
+      Number.isInteger(pageNumber) && pageNumber >= 1
+        ? pageNumber
+        : null,
+    originalQuestionNumber: String(
+      value.originalQuestionNumber || ""
+    ).trim(),
+  };
+}
+
+// ======================================================
+// GET ظ¤ ╪ش┘à┘è╪╣ ╪ث╪│╪خ┘╪ر ╪ذ┘┘â ╪د┘╪ث╪│╪خ┘╪ر
 // ======================================================
 
 router.get("/", async (req, res) => {
@@ -17,8 +120,13 @@ router.get("/", async (req, res) => {
       subjectId,
       unitId,
       lessonId,
+      sectionId,
+      systemId,
       type,
       difficulty,
+      cognitiveLevel,
+      imported,
+      importBatchId,
       active,
       search,
       page = 1,
@@ -32,8 +140,15 @@ router.get("/", async (req, res) => {
     if (subjectId) filter.subjectId = subjectId;
     if (unitId) filter.unitId = unitId;
     if (lessonId) filter.lessonId = lessonId;
+    if (sectionId) filter.sectionId = sectionId;
+    if (systemId) filter.systemId = systemId;
     if (type) filter.type = type;
     if (difficulty) filter.difficulty = difficulty;
+    if (cognitiveLevel) filter.cognitiveLevel = cognitiveLevel;
+    if (imported !== undefined) {
+      filter.imported = imported === "true";
+    }
+    if (importBatchId) filter.importBatchId = importBatchId;
 
     if (active !== undefined) {
       filter.active = active === "true";
@@ -47,7 +162,6 @@ router.get("/", async (req, res) => {
     }
 
     const pageNumber = Math.max(Number(page), 1);
-
     const limitNumber = Math.min(
       Math.max(Number(limit), 1),
       200
@@ -59,7 +173,7 @@ router.get("/", async (req, res) => {
     const [questions, total] =
       await Promise.all([
         QuestionBank.find(filter)
-          .sort({ createdAt: -1 })
+          .sort(importBatchId ? { importOrder: 1 } : { createdAt: -1 })
           .skip(skip)
           .limit(limitNumber)
           .lean(),
@@ -93,7 +207,50 @@ router.get("/", async (req, res) => {
 });
 
 // ======================================================
-// GET — سؤال واحد
+// POST ظ¤ ╪د╪│╪ز┘è╪▒╪د╪» ╪د┘╪ث╪│╪خ┘╪ر ╪ح┘┘ë Preview ┘┘é╪╖
+// ┘╪د ┘è╪ز┘à ╪د┘╪ص┘╪╕ ┘┘è QuestionBank ┘ç┘╪د.
+// ======================================================
+router.post("/import/preview", async (req, res) => {
+  try {
+    const {
+      questionsText = "",
+      answerKeyText = "",
+      visualAssets = [],
+      sourceDocument = null,
+      defaults = {},
+    } = req.body || {};
+
+    if (!String(questionsText || "").trim()) {
+      return res.status(400).json({
+        success: false,
+        error: "┘╪╡ ╪د┘╪ث╪│╪خ┘╪ر ┘à╪╖┘┘ê╪ذ ┘╪ح┘╪┤╪د╪ة ╪د┘┘à╪╣╪د┘è┘╪ر.",
+      });
+    }
+
+    const preview = buildImportPreview({
+      questionsText,
+      answerKeyText,
+      visualAssets,
+      sourceDocument,
+      defaults,
+    });
+
+    if (!preview.success) {
+      return res.status(400).json(preview);
+    }
+
+    return res.json(preview);
+  } catch (err) {
+    console.error("Question Bank IMPORT PREVIEW error:", err);
+    return res.status(400).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
+
+// ======================================================
+// GET ظ¤ ╪│╪ج╪د┘ ┘ê╪د╪ص╪»
 // ======================================================
 
 router.get("/:id", async (req, res) => {
@@ -128,55 +285,73 @@ router.get("/:id", async (req, res) => {
 });
 
 // ======================================================
-// POST — إضافة سؤال جديد
+// POST ظ¤ ╪ح╪╢╪د┘╪ر ╪│╪ج╪د┘ ╪ش╪»┘è╪»
 // ======================================================
 
 router.post("/", async (req, res) => {
   try {
     const {
       questionText,
-
       type = "mcq",
-
       choices = [],
-
-      choiceLayout = "vertical",
-
       correctAnswer = null,
-
       modelAnswer = "",
-
       gradingCriteria = [],
-
       marks = 1,
 
       stageId = "",
-
       gradeId = "",
-
       subjectId = "",
-
       unitId = "",
-
       lessonId = "",
+      sectionId = "",
+      sectionTitle = "",
+      systemId = "",
+      importOrder = 0,
+      originalQuestionNumber = null,
 
       difficulty = "medium",
+      cognitiveLevel = "",
 
       source = "teacher",
-
       sourceName = "",
 
       explanation = "",
 
       aiGenerated = false,
-
       aiReviewed = false,
 
+      imported = false,
+      importBatchId = "",
+
+      visualAssets = [],
+      sourceDocument = null,
+      sourcePage = null,
+
       active = true,
+
+      choiceLayout = "vertical",
     } = req.body;
 
+    const normalizedChoiceLayout =
+      ["vertical", "row4", "grid2x2"].includes(choiceLayout)
+        ? choiceLayout
+        : "vertical";
+
+    const normalizedVisualAssets =
+      normalizeVisualAssets(visualAssets);
+
+    const normalizedSourceDocument =
+      normalizeSourceDocument(sourceDocument);
+
+    const normalizedSourcePage =
+      normalizeSourcePage(sourcePage);
+
+    const allowUnresolvedImport =
+      imported === true && source === "imported_exam";
+
     // ==================================================
-    // التحقق الأساسي
+    // ╪د┘╪ز╪ص┘é┘é ╪د┘╪ث╪│╪د╪│┘è
     // ==================================================
 
     if (
@@ -185,22 +360,20 @@ router.post("/", async (req, res) => {
     ) {
       return res.status(400).json({
         success: false,
-        error: "نص السؤال مطلوب.",
+        error: "┘╪╡ ╪د┘╪│╪ج╪د┘ ┘à╪╖┘┘ê╪ذ.",
       });
     }
 
-    if (
-      !["mcq", "essay"].includes(type)
-    ) {
+    if (!["mcq", "essay"].includes(type)) {
       return res.status(400).json({
         success: false,
         error:
-          "نوع السؤال يجب أن يكون mcq أو essay.",
+          "┘┘ê╪╣ ╪د┘╪│╪ج╪د┘ ┘è╪ش╪ذ ╪ث┘ ┘è┘â┘ê┘ mcq ╪ث┘ê essay.",
       });
     }
 
     // ==================================================
-    // تطبيع النص لمنع التكرار
+    // ╪ز╪╖╪ذ┘è╪╣ ╪د┘┘╪╡ ┘┘à┘╪╣ ╪د┘╪ز┘â╪▒╪د╪▒
     // ==================================================
 
     const normalizedText =
@@ -210,12 +383,14 @@ router.post("/", async (req, res) => {
         .toLowerCase();
 
     // ==================================================
-    // البحث عن سؤال مكرر في نفس الدرس
+    // ╪د┘╪ذ╪ص╪س ╪╣┘ ╪│╪ج╪د┘ ┘à┘â╪▒╪▒ ┘┘è ┘┘╪│ ╪د┘╪»╪▒╪│
     // ==================================================
 
     const duplicate =
       await QuestionBank.findOne({
         lessonId,
+        systemId,
+        sectionId,
         normalizedText,
         active: true,
       });
@@ -225,7 +400,7 @@ router.post("/", async (req, res) => {
         success: false,
         duplicate: true,
         error:
-          "هذا السؤال موجود بالفعل في بنك أسئلة هذا الدرس.",
+          "┘ç╪░╪د ╪د┘╪│╪ج╪د┘ ┘à┘ê╪ش┘ê╪» ╪ذ╪د┘┘╪╣┘ ┘┘è ╪ذ┘┘â ╪ث╪│╪خ┘╪ر ┘ç╪░╪د ╪د┘╪»╪▒╪│.",
         questionId: duplicate._id,
       });
     }
@@ -242,20 +417,21 @@ router.post("/", async (req, res) => {
         return res.status(400).json({
           success: false,
           error:
-            "سؤال الاختيار من متعدد يجب أن يحتوي على 4 اختيارات.",
+            "╪│╪ج╪د┘ ╪د┘╪د╪«╪ز┘è╪د╪▒ ┘à┘ ┘à╪ز╪╣╪»╪» ┘è╪ش╪ذ ╪ث┘ ┘è╪ص╪ز┘ê┘è ╪╣┘┘ë 4 ╪د╪«╪ز┘è╪د╪▒╪د╪ز.",
         });
       }
 
       if (
-        correctAnswer === null ||
-        correctAnswer === undefined ||
-        correctAnswer < 0 ||
-        correctAnswer > 3
+        !allowUnresolvedImport &&
+        (correctAnswer === null ||
+          correctAnswer === undefined ||
+          correctAnswer < 0 ||
+          correctAnswer > 3)
       ) {
         return res.status(400).json({
           success: false,
           error:
-            "يجب تحديد الإجابة الصحيحة من 0 إلى 3.",
+            "┘è╪ش╪ذ ╪ز╪ص╪»┘è╪» ╪د┘╪ح╪ش╪د╪ذ╪ر ╪د┘╪╡╪ص┘è╪ص╪ر ┘à┘ 0 ╪ح┘┘ë 3.",
         });
       }
     }
@@ -266,19 +442,20 @@ router.post("/", async (req, res) => {
 
     if (type === "essay") {
       if (
-        !modelAnswer ||
-        !modelAnswer.trim()
+        !allowUnresolvedImport &&
+        (!modelAnswer ||
+        !modelAnswer.trim())
       ) {
         return res.status(400).json({
           success: false,
           error:
-            "السؤال المقالي يحتاج إلى نموذج إجابة.",
+            "╪د┘╪│╪ج╪د┘ ╪د┘┘à┘é╪د┘┘è ┘è╪ص╪ز╪د╪ش ╪ح┘┘ë ┘┘à┘ê╪░╪ش ╪ح╪ش╪د╪ذ╪ر.",
         });
       }
     }
 
     // ==================================================
-    // إنشاء السؤال
+    // ╪ح┘╪┤╪د╪ة ╪د┘╪│╪ج╪د┘
     // ==================================================
 
     const question =
@@ -292,17 +469,6 @@ router.post("/", async (req, res) => {
           type === "mcq"
             ? choices
             : [],
-
-        choiceLayout:
-          type === "mcq"
-            ? [
-                "vertical",
-                "row4",
-                "grid2x2",
-              ].includes(choiceLayout)
-              ? choiceLayout
-              : "vertical"
-            : "vertical",
 
         correctAnswer:
           type === "mcq"
@@ -322,30 +488,41 @@ router.post("/", async (req, res) => {
         marks,
 
         stageId,
-
         gradeId,
-
         subjectId,
-
         unitId,
-
         lessonId,
+        sectionId,
+        sectionTitle,
+        systemId,
+        importOrder: Number(importOrder) || 0,
+        originalQuestionNumber: String(
+          originalQuestionNumber ?? ""
+        ).trim(),
 
         difficulty,
+        cognitiveLevel,
+
+        visualAssets: normalizedVisualAssets,
+        sourceDocument: normalizedSourceDocument,
+        sourcePage: normalizedSourcePage,
 
         source,
-
         sourceName,
 
         explanation,
 
         aiGenerated,
-
         aiReviewed,
+
+        imported,
+        importBatchId,
 
         normalizedText,
 
         active,
+
+        choiceLayout: normalizedChoiceLayout,
       });
 
     await question.save();
@@ -353,7 +530,7 @@ router.post("/", async (req, res) => {
     res.status(201).json({
       success: true,
       message:
-        "تمت إضافة السؤال إلى بنك الأسئلة بنجاح.",
+        "╪ز┘à╪ز ╪ح╪╢╪د┘╪ر ╪د┘╪│╪ج╪د┘ ╪ح┘┘ë ╪ذ┘┘â ╪د┘╪ث╪│╪خ┘╪ر ╪ذ┘╪ش╪د╪ص.",
       question,
     });
   } catch (err) {
@@ -370,7 +547,7 @@ router.post("/", async (req, res) => {
 });
 
 // ======================================================
-// PUT — تعديل سؤال
+// PUT ظ¤ ╪ز╪╣╪»┘è┘ ╪│╪ج╪د┘
 // ======================================================
 
 router.put("/:id", async (req, res) => {
@@ -389,44 +566,43 @@ router.put("/:id", async (req, res) => {
 
     const allowedFields = [
       "questionText",
-
       "type",
-
       "choices",
-
-      "choiceLayout",
-
       "correctAnswer",
-
       "modelAnswer",
-
       "gradingCriteria",
-
       "marks",
 
       "stageId",
-
       "gradeId",
-
       "subjectId",
-
       "unitId",
-
       "lessonId",
+      "sectionId",
+      "systemId",
+      "importOrder",
+      "originalQuestionNumber",
+      "sectionTitle",
 
       "difficulty",
+      "cognitiveLevel",
 
       "source",
-
       "sourceName",
 
       "explanation",
 
       "aiGenerated",
-
       "aiReviewed",
 
+      "imported",
+      "importBatchId",
+      "visualAssets",
+      "sourceDocument",
+      "sourcePage",
+
       "active",
+      "choiceLayout",
     ];
 
     for (const field of allowedFields) {
@@ -438,6 +614,11 @@ router.put("/:id", async (req, res) => {
       }
     }
 
+    if (question.choiceLayout &&
+        !["vertical", "row4", "grid2x2"].includes(question.choiceLayout)) {
+      question.choiceLayout = "vertical";
+    }
+
     if (question.questionText) {
       question.normalizedText =
         question.questionText
@@ -446,18 +627,19 @@ router.put("/:id", async (req, res) => {
           .toLowerCase();
     }
 
-    if (
-      question.type === "mcq" &&
-      ![
-        "vertical",
-        "row4",
-        "grid2x2",
-      ].includes(
-        question.choiceLayout
-      )
-    ) {
-      question.choiceLayout =
-        "vertical";
+    if (req.body.visualAssets !== undefined) {
+      question.visualAssets =
+        normalizeVisualAssets(req.body.visualAssets);
+    }
+
+    if (req.body.sourceDocument !== undefined) {
+      question.sourceDocument =
+        normalizeSourceDocument(req.body.sourceDocument);
+    }
+
+    if (req.body.sourcePage !== undefined) {
+      question.sourcePage =
+        normalizeSourcePage(req.body.sourcePage);
     }
 
     await question.save();
@@ -465,7 +647,7 @@ router.put("/:id", async (req, res) => {
     res.json({
       success: true,
       message:
-        "تم تعديل السؤال بنجاح.",
+        "╪ز┘à ╪ز╪╣╪»┘è┘ ╪د┘╪│╪ج╪د┘ ╪ذ┘╪ش╪د╪ص.",
       question,
     });
   } catch (err) {
@@ -482,7 +664,7 @@ router.put("/:id", async (req, res) => {
 });
 
 // ======================================================
-// DELETE — حذف السؤال
+// DELETE ظ¤ ╪ص╪░┘ ╪د┘╪│╪ج╪د┘
 // ======================================================
 
 router.delete("/:id", async (req, res) => {
@@ -500,7 +682,7 @@ router.delete("/:id", async (req, res) => {
     }
 
     // ==================================================
-    // حذف منطقي وليس حذفًا نهائيًا
+    // ╪ص╪░┘ ┘à┘╪╖┘é┘è ┘ê┘┘è╪│ ╪ص╪░┘┘ï╪د ┘┘ç╪د╪خ┘è┘ï╪د
     // ==================================================
 
     question.active = false;
@@ -510,7 +692,7 @@ router.delete("/:id", async (req, res) => {
     res.json({
       success: true,
       message:
-        "تم تعطيل السؤال من بنك الأسئلة.",
+        "╪ز┘à ╪ز╪╣╪╖┘è┘ ╪د┘╪│╪ج╪د┘ ┘à┘ ╪ذ┘┘â ╪د┘╪ث╪│╪خ┘╪ر.",
     });
   } catch (err) {
     console.error(
@@ -526,153 +708,147 @@ router.delete("/:id", async (req, res) => {
 });
 
 // ======================================================
-// POST — اختيار أسئلة عشوائية من درس
+// POST ظ¤ ╪د╪«╪ز┘è╪د╪▒ ╪ث╪│╪خ┘╪ر ╪╣╪┤┘ê╪د╪خ┘è╪ر ┘à┘ ╪»╪▒╪│
 // ======================================================
 
-router.post(
-  "/random/select",
-  async (req, res) => {
-    try {
-      const {
-        lessonId,
+router.post("/random/select", async (req, res) => {
+  try {
+    const {
+      lessonId,
+      sectionId,
+      count = 10,
+      type,
+      difficulty,
+      cognitiveLevel,
+      excludeIds = [],
+    } = req.body;
 
-        count = 10,
-
-        type,
-
-        difficulty,
-
-        excludeIds = [],
-      } = req.body;
-
-      if (!lessonId) {
-        return res.status(400).json({
-          success: false,
-          error: "lessonId مطلوب.",
-        });
-      }
-
-      const number =
-        Math.max(Number(count), 1);
-
-      const filter = {
-        lessonId,
-
-        active: true,
-      };
-
-      if (type) {
-        filter.type = type;
-      }
-
-      if (difficulty) {
-        filter.difficulty =
-          difficulty;
-      }
-
-      if (
-        Array.isArray(excludeIds) &&
-        excludeIds.length > 0
-      ) {
-        filter._id = {
-          $nin: excludeIds,
-        };
-      }
-
-      const questions =
-        await QuestionBank.aggregate([
-          {
-            $match: filter,
-          },
-
-          {
-            $sample: {
-              size: number,
-            },
-          },
-        ]);
-
-      res.json({
-        success: true,
-        count: questions.length,
-        questions,
-      });
-    } catch (err) {
-      console.error(
-        "Question Bank RANDOM error:",
-        err
-      );
-
-      res.status(500).json({
+    if (!lessonId) {
+      return res.status(400).json({
         success: false,
-        error: err.message,
+        error: "lessonId ┘à╪╖┘┘ê╪ذ.",
       });
     }
-  }
-);
 
-// ======================================================
-// POST — تسجيل استخدام الأسئلة
-// ======================================================
+    const number =
+      Math.max(Number(count), 1);
 
-router.post(
-  "/mark-used",
-  async (req, res) => {
-    try {
-      const {
-        questionIds = [],
-      } = req.body;
+    const filter = {
+      lessonId,
+      active: true,
+    };
 
-      if (
-        !Array.isArray(questionIds) ||
-        questionIds.length === 0
-      ) {
-        return res.status(400).json({
-          success: false,
-          error:
-            "questionIds مطلوب.",
-        });
-      }
+    if (sectionId) {
+      filter.sectionId = sectionId;
+    }
 
-      await QuestionBank.updateMany(
+    if (type) {
+      filter.type = type;
+    }
+
+    if (difficulty) {
+      filter.difficulty =
+        difficulty;
+    }
+
+    if (cognitiveLevel) {
+      filter.cognitiveLevel = cognitiveLevel;
+    }
+
+    if (
+      Array.isArray(excludeIds) &&
+      excludeIds.length > 0
+    ) {
+      filter._id = {
+        $nin: excludeIds,
+      };
+    }
+
+    const questions =
+      await QuestionBank.aggregate([
         {
-          _id: {
-            $in: questionIds,
-          },
+          $match: filter,
         },
 
         {
-          $inc: {
-            usageCount: 1,
+          $sample: {
+            size: number,
           },
+        },
+      ]);
 
-          $set: {
-            lastUsedAt: new Date(),
-          },
-        }
-      );
+    res.json({
+      success: true,
+      count: questions.length,
+      questions,
+    });
+  } catch (err) {
+    console.error(
+      "Question Bank RANDOM error:",
+      err
+    );
 
-      res.json({
-        success: true,
-        message:
-          "تم تسجيل استخدام الأسئلة.",
-      });
-    } catch (err) {
-      console.error(
-        "Question Bank MARK USED error:",
-        err
-      );
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
 
-      res.status(500).json({
+// ======================================================
+// POST ظ¤ ╪ز╪│╪ش┘è┘ ╪د╪│╪ز╪«╪»╪د┘à ╪د┘╪ث╪│╪خ┘╪ر
+// ======================================================
+
+router.post("/mark-used", async (req, res) => {
+  try {
+    const {
+      questionIds = [],
+    } = req.body;
+
+    if (
+      !Array.isArray(questionIds) ||
+      questionIds.length === 0
+    ) {
+      return res.status(400).json({
         success: false,
-        error: err.message,
+        error:
+          "questionIds ┘à╪╖┘┘ê╪ذ.",
       });
     }
-  }
-);
 
-// ======================================================
-// EXPORT
-// ======================================================
+    await QuestionBank.updateMany(
+      {
+        _id: {
+          $in: questionIds,
+        },
+      },
+      {
+        $inc: {
+          usageCount: 1,
+        },
+
+        $set: {
+          lastUsedAt: new Date(),
+        },
+      }
+    );
+
+    res.json({
+      success: true,
+      message:
+        "╪ز┘à ╪ز╪│╪ش┘è┘ ╪د╪│╪ز╪«╪»╪د┘à ╪د┘╪ث╪│╪خ┘╪ر.",
+    });
+  } catch (err) {
+    console.error(
+      "Question Bank MARK USED error:",
+      err
+    );
+
+    res.status(500).json({
+      success: false,
+      error: err.message,
+    });
+  }
+});
 
 module.exports = router;

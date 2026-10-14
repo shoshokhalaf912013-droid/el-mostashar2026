@@ -16,181 +16,175 @@ export default function BacAdvancedSubjectsView() {
   const [subjects, setSubjects] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  /* =====================================================
-     تحميل المواد عند تغيير الصف
-  ===================================================== */
-
   useEffect(() => {
     loadSubjects();
   }, [gradeId]);
-
-  /* =====================================================
-     تحميل المواد
-  ===================================================== */
 
   async function loadSubjects() {
     setLoading(true);
 
     try {
-      /* ===================================================
-         تحديد مصدر المواد العامة
-
-         bac2:
-         له الآن مادة عامة خاصة به:
-         National History
-
-         bac3:
-         المواد العامة يمكن أن تستمر في الوراثة
-         من sec3 كما كان النظام الأصلي.
-      =================================================== */
-
-      const sourceGradeId =
-        gradeId === "bac3"
-          ? "sec3"
-          : gradeId;
-
-      /* ===================================================
-         المواد العامة
-      =================================================== */
-
-      const generalQ = query(
-        collection(db, "gradeSubjects"),
-        where("gradeId", "==", sourceGradeId),
-        where("active", "==", true),
-        orderBy("order", "asc")
-      );
-
-      const generalSnap = await getDocs(generalQ);
-
-      const generalSubjects = generalSnap.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-
-      /* ===================================================
-         مواد المسارات
-
-         لا نحذفها ولا ننقلها.
-         ستظل موجودة لاستخدام النسخة الشاملة.
-      =================================================== */
-
-      const trackQ = query(
-        collection(db, "trackSubjects"),
-        where("gradeId", "==", gradeId),
-        where("active", "==", true),
-        orderBy("order", "asc")
-      );
-
-      const trackSnap = await getDocs(trackQ);
-
-      const trackSubjects = trackSnap.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
-
-      /* ===================================================
-         تحديد المواد التي تظهر في النسخة الحالية
-      =================================================== */
-
       let selectedSubjects = [];
 
-      /* ===================================================
-         الصف الثاني بكالوريا
+      /* =====================================================
+         BAC 1
+         نفس مادة التاريخ الموجودة في الصف الأول الثانوي العام
+         sec1
+      ===================================================== */
 
-         لا يرث history من sec2.
+      if (gradeId === "bac1") {
+        const q = query(
+          collection(db, "gradeSubjects"),
+          where("active", "==", true),
+          where("stageId", "==", "secondary"),
+          where("gradeId", "==", "sec1")
+        );
 
-         يستخدم المادة العامة الخاصة بالبكالوريا:
+        const snapshot = await getDocs(q);
 
-         subjectId = National History
-      =================================================== */
+        const data = snapshot.docs
+          .map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
+          .filter((subject) => {
+            const title = subject.title?.trim();
+
+            return title === "التاريخ";
+          })
+          .sort(
+            (a, b) =>
+              (a.order ?? 0) - (b.order ?? 0)
+          );
+
+        selectedSubjects = data;
+      }
+
+      /* =====================================================
+         BAC 2
+         التاريخ الوطني الخاص بالبكالوريا
+      ===================================================== */
 
       if (gradeId === "bac2") {
-        selectedSubjects = generalSubjects.filter(
-          (subject) =>
-            subject.subjectId === "National History"
+        const q = query(
+          collection(db, "gradeSubjects"),
+          where("active", "==", true),
+          where("gradeId", "==", "bac2")
         );
+
+        const snapshot = await getDocs(q);
+
+        const data = snapshot.docs
+          .map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
+          .filter((subject) => {
+            const subjectId = String(
+              subject.subjectId || ""
+            )
+              .trim()
+              .toLowerCase();
+
+            const title = String(
+              subject.title || ""
+            ).trim();
+
+            const nameAr = String(
+              subject.nameAr || ""
+            ).trim();
+
+            return (
+              subjectId === "national history" ||
+              subjectId === "national-history" ||
+              title === "التاريخ الوطني" ||
+              nameAr === "التاريخ الوطني"
+            );
+          })
+          .sort(
+            (a, b) =>
+              (a.order ?? 0) - (b.order ?? 0)
+          );
+
+        selectedSubjects = data;
       }
 
-      /* ===================================================
-         الصف الثالث بكالوريا
-
-         النسخة الحالية تستخدم:
-
-         1. الاقتصاد
-         2. الجغرافيا
-
-         كلاهما موجود في trackSubjects
-         وكل مادة تحتفظ بـ trackId الخاص بها.
-
-         لا نقوم بنقلها إلى gradeSubjects.
-         ولا نحذف بقية مواد المسارات.
-      =================================================== */
+      /* =====================================================
+         BAC 3
+         الاقتصاد + الجغرافيا
+      ===================================================== */
 
       if (gradeId === "bac3") {
-        const economySubjects = trackSubjects.filter(
-          (subject) =>
-            subject.subjectId === "economics"
+        const q = query(
+          collection(db, "trackSubjects"),
+          where("active", "==", true),
+          where("gradeId", "==", "bac3")
         );
 
-        const geographySubjects = trackSubjects.filter(
-          (subject) =>
-            subject.subjectId === "geography"
-        );
+        const snapshot = await getDocs(q);
 
-        selectedSubjects = [
-          ...economySubjects,
-          ...geographySubjects,
-        ];
+        const data = snapshot.docs
+          .map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+          }))
+          .filter((subject) => {
+            const subjectId = String(
+              subject.subjectId || ""
+            )
+              .trim()
+              .toLowerCase();
+
+            return (
+              subjectId === "economics" ||
+              subjectId === "geography"
+            );
+          })
+          .sort(
+            (a, b) =>
+              (a.order ?? 0) - (b.order ?? 0)
+          );
+
+        selectedSubjects = data;
       }
 
-      /* ===================================================
-         منع التكرار
-
-         نستخدم subjectId كمفتاح للمادة.
-      =================================================== */
-
-      const uniqueSubjects = Array.from(
-        new Map(
-          selectedSubjects.map((subject) => [
-            subject.subjectId,
-            subject,
-          ])
-        ).values()
+      console.log(
+        `[BAC] ${gradeId} FINAL SUBJECTS:`,
+        selectedSubjects
       );
 
-      /* ===================================================
-         ترتيب المواد
-
-         نحافظ على order الموجود في Firebase.
-      =================================================== */
-
-      uniqueSubjects.sort(
-        (a, b) =>
-          (a.order || 0) - (b.order || 0)
-      );
-
-      setSubjects(uniqueSubjects);
-
+      setSubjects(selectedSubjects);
     } catch (error) {
       console.error(
-        "❌ Error loading Bac subjects:",
+        `[BAC] Error loading subjects for ${gradeId}:`,
         error
       );
 
       setSubjects([]);
-
     } finally {
       setLoading(false);
     }
   }
 
   /* =====================================================
-     الانتقال إلى الوحدات
+     فتح المادة
+     
+     مهم جدًا:
+     bac1 يستخدم نفس subjectId الموجود في sec1
+     وبالتالي يفتح نفس وحدات التاريخ الخاصة بالثانوي العام.
   ===================================================== */
 
   const goToUnits = (subject) => {
+    const subjectId =
+      subject.subjectId || subject.id;
+
+    console.log(
+      "[BAC] Opening subject:",
+      subjectId
+    );
+
     navigate(
-      `/student/bac/units/${gradeId}/${subject.subjectId}`
+      `/student/bac/units/${gradeId}/${subjectId}`
     );
   };
 
@@ -200,9 +194,23 @@ export default function BacAdvancedSubjectsView() {
 
   if (loading) {
     return (
-      <div className="min-h-screen bg-black text-white p-10 flex items-center justify-center">
+      <div className="min-h-screen bg-black text-white flex items-center justify-center">
         <div className="text-yellow-400 text-xl">
           جاري التحميل...
+        </div>
+      </div>
+    );
+  }
+
+  /* =====================================================
+     No subjects
+  ===================================================== */
+
+  if (!subjects.length) {
+    return (
+      <div className="min-h-screen bg-black text-white p-10">
+        <div className="text-center text-red-400 text-xl">
+          لا توجد مادة متاحة لهذا الصف
         </div>
       </div>
     );
@@ -216,60 +224,80 @@ export default function BacAdvancedSubjectsView() {
     <div className="min-h-screen bg-black text-white p-10">
 
       <h1 className="text-2xl font-bold text-yellow-400 text-center mb-10">
-        {gradeId === "bac2"
+        {gradeId === "bac1"
+          ? "مواد الصف الأول بالبكالوريا"
+          : gradeId === "bac2"
           ? "مواد الصف الثاني بالبكالوريا"
           : "مواد الصف الثالث بالبكالوريا"}
       </h1>
 
-      {subjects.length > 0 ? (
-        <div className="max-w-4xl mx-auto">
+      <div className="max-w-4xl mx-auto">
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
 
-            {subjects.map((subject) => (
+          {subjects.map((subject) => {
+            const subjectId =
+              subject.subjectId || subject.id;
+
+            let title = "";
+
+            if (gradeId === "bac1") {
+              title = "التاريخ";
+            } else if (gradeId === "bac2") {
+              title =
+                subject.title ||
+                subject.nameAr ||
+                "التاريخ الوطني";
+            } else if (
+              String(subjectId)
+                .trim()
+                .toLowerCase() === "economics"
+            ) {
+              title = "الاقتصاد";
+            } else if (
+              String(subjectId)
+                .trim()
+                .toLowerCase() === "geography"
+            ) {
+              title = "الجغرافيا";
+            } else {
+              title =
+                subject.title ||
+                subject.nameAr ||
+                subjectId;
+            }
+
+            return (
               <button
                 key={subject.id}
+                type="button"
                 onClick={() => goToUnits(subject)}
                 className="
+                  block
+                  w-full
+                  min-h-[80px]
                   cursor-pointer
+                  bg-zinc-900
                   rounded-xl
-                  px-6
-                  py-5
+                  p-8
                   text-center
                   border
-                  border-yellow-500
-                  text-yellow-400
-                  bg-zinc-900
-                  transition-all
-                  duration-200
-                  hover:bg-yellow-400
-                  hover:text-black
-                  hover:scale-[1.02]
+                  border-yellow-700/40
+                  text-yellow-200
+                  font-semibold
+                  hover:border-yellow-400
+                  hover:shadow-[0_0_18px_rgba(255,215,0,0.35)]
+                  transition
                 "
               >
-                {subject.title ||
-                  subject.nameAr ||
-                  (
-                    subject.subjectId === "National History"
-                      ? "التاريخ الوطنى"
-                      : subject.subjectId === "economics"
-                      ? "الاقتصاد"
-                      : subject.subjectId === "geography"
-                      ? "الجغرافيا"
-                      : subject.subjectId
-                  )}
+                {title}
               </button>
-            ))}
-
-          </div>
+            );
+          })}
 
         </div>
-      ) : (
-        <div className="text-center text-red-400 text-xl">
-          لا توجد مادة متاحة لهذا الصف
-        </div>
-      )}
 
+      </div>
     </div>
   );
 }

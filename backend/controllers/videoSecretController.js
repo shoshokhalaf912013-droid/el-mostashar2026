@@ -147,6 +147,8 @@ function extractYoutubeId(
 
     /youtube\.com\/live\/([A-Za-z0-9_-]{11})/i,
 
+    /studio\.youtube\.com\/video\/([A-Za-z0-9_-]{11})(?:[\/?#]|$)/i,
+
     /youtu\.be\/([A-Za-z0-9_-]{11})/i,
 
   ];
@@ -185,6 +187,90 @@ function createVideoKey() {
 }
 
 // =========================================================
+// LESSON INDEX
+//
+// The platform currently has two lesson locations:
+//
+// 1) Top-level: lessons/{lessonId}
+// 2) Legacy/current nested: grades/{gradeId}/subjects/{subjectId}/units/{unitId}/lessons/{lessonId}
+//
+// We read both and merge by the real Firestore lesson ID so the
+// Super Admin can manage old and new lessons from one screen.
+// =========================================================
+
+async function loadLessonIndex(db) {
+
+  const [
+    rootSnapshot,
+    groupSnapshot,
+  ] = await Promise.all([
+
+    db
+      .collection('lessons')
+      .get(),
+
+    db
+      .collectionGroup('lessons')
+      .get(),
+
+  ]);
+
+  const byId = new Map();
+
+  const addRecord = (lessonDoc, source) => {
+
+    const id = lessonDoc.id;
+    const data = lessonDoc.data() || {};
+
+    const current = byId.get(id);
+
+    if (!current) {
+      byId.set(id, {
+        id,
+        data,
+        rootRef: source === 'root' ? lessonDoc.ref : null,
+        nestedRefs: source === 'nested' ? [lessonDoc.ref] : [],
+      });
+      return;
+    }
+
+    // Root lessons are the canonical mirror when present.
+    // Nested data fills any missing fields for legacy lessons.
+    const mergedData =
+      source === 'root'
+        ? { ...current.data, ...data }
+        : { ...data, ...current.data };
+
+    current.data = mergedData;
+
+    if (source === 'root') {
+      current.rootRef = lessonDoc.ref;
+    } else {
+      current.nestedRefs.push(lessonDoc.ref);
+    }
+  };
+
+  rootSnapshot.docs.forEach((lessonDoc) =>
+    addRecord(lessonDoc, 'root')
+  );
+
+  groupSnapshot.docs.forEach((lessonDoc) =>
+    addRecord(lessonDoc, 'nested')
+  );
+
+  return Array.from(byId.values());
+}
+
+async function findLessonRecord(db, lessonId) {
+
+  const records = await loadLessonIndex(db);
+  return (
+    records.find((record) => record.id === lessonId) ||
+    null
+  );
+}
+
+// =========================================================
 // GET ALL LESSONS
 // SUPER ADMIN ONLY
 // =========================================================
@@ -210,70 +296,67 @@ exports.listLessons =
       const db =
         getDb();
 
-      // ---------------------------------------------------
-      // Load all lessons
-      //
-      // We intentionally avoid orderBy("createdAt")
-      // because older documents may not contain that field.
-      // ---------------------------------------------------
-
-      const snapshot =
-        await db
-          .collection(
-            "lessons"
-          )
-          .get();
+      const records =
+        await loadLessonIndex(db);
 
       const lessons =
-        snapshot.docs
-          .map(
-            (lessonDoc) => {
+        records.map(
+          (record) => {
 
-              const data =
-                lessonDoc.data() ||
-                {};
+            const data =
+              record.data || {};
 
-              return {
+            return {
 
-                id:
-                  lessonDoc.id,
+              id:
+                record.id,
 
-                title:
-                  data.title ||
-                  "بدون عنوان",
+              title:
+                data.title ||
+                '╪ذ╪»┘ê┘ ╪╣┘┘ê╪د┘',
 
-                gradeId:
-                  data.gradeId ||
-                  "",
+              gradeId:
+                data.gradeId ||
+                '',
 
-                subjectId:
-                  data.subjectId ||
-                  "",
+              subjectId:
+                data.subjectId ||
+                '',
 
-                unitId:
-                  data.unitId ||
-                  "",
+              unitId:
+                data.unitId ||
+                '',
 
-                publicLessonId:
-                  data.publicLessonId ||
-                  "",
+              order:
+                Number.isFinite(Number(data.order))
+                  ? Number(data.order)
+                  : null,
 
-                active:
-                  data.active !== false,
+              previousExamRequirement:
+                data.previousExamRequirement === "required"
+                  ? "required"
+                  : "none",
 
-                createdAt:
-                  serializeTimestamp(
-                    data.createdAt
-                  ),
+              publicLessonId:
+                data.publicLessonId ||
+                '',
 
-                updatedAt:
-                  serializeTimestamp(
-                    data.updatedAt
-                  ),
+              active:
+                data.active !== false,
 
-              };
-            }
-          );
+              createdAt:
+                serializeTimestamp(
+                  data.createdAt
+                ),
+
+              updatedAt:
+                serializeTimestamp(
+                  data.updatedAt
+                ),
+
+            };
+          }
+        );
 
       return res.json({
 
@@ -287,7 +370,7 @@ exports.listLessons =
     } catch (error) {
 
       console.error(
-        "❌ listLessons error:",
+        'ظإî listLessons error:',
         error
       );
 
@@ -300,7 +383,7 @@ exports.listLessons =
 
         error:
           error.message ||
-          "Failed to load lessons",
+          'Failed to load lessons',
 
       });
     }
@@ -347,19 +430,15 @@ exports.listVideoSecrets =
       // ---------------------------------------------------
 
       const [
-        lessonsSnapshot,
+        lessonRecords,
         videosSnapshot,
       ] = await Promise.all([
 
-        db
-          .collection(
-            "lessons"
-          )
-          .get(),
+        loadLessonIndex(db),
 
         db
           .collection(
-            "lessonVideos"
+            'lessonVideos'
           )
           .get(),
 
@@ -373,24 +452,19 @@ exports.listVideoSecrets =
         new Map();
 
       for (
-        const lessonDoc of
-          lessonsSnapshot.docs
+        const record of lessonRecords
       ) {
 
         lessonMap.set(
-          lessonDoc.id,
+          record.id,
           {
-            ...(
-              lessonDoc.data() ||
-              {}
-            ),
-            id:
-              lessonDoc.id,
+            ...(record.data || {}),
+            id: record.id,
           }
         );
       }
 
-      // ---------------------------------------------------
+// ---------------------------------------------------
       // Build result
       // ---------------------------------------------------
 
@@ -425,7 +499,7 @@ exports.listVideoSecrets =
 
                 title:
                   lesson.title ||
-                  "بدون عنوان",
+                  "╪ذ╪»┘ê┘ ╪╣┘┘ê╪د┘",
 
                 gradeId:
                   lesson.gradeId ||
@@ -441,6 +515,18 @@ exports.listVideoSecrets =
                   lesson.unitId ||
                   videoData.unitId ||
                   "",
+
+                order:
+                  Number.isFinite(Number(lesson.order))
+                    ? Number(lesson.order)
+                    : Number.isFinite(Number(videoData.order))
+                      ? Number(videoData.order)
+                      : null,
+
+                previousExamRequirement:
+                  lesson.previousExamRequirement === "required"
+                    ? "required"
+                    : "none",
 
                 publicLessonId:
                   lesson.publicLessonId ||
@@ -496,7 +582,7 @@ exports.listVideoSecrets =
     } catch (error) {
 
       console.error(
-        "❌ listVideoSecrets error:",
+        "ظإî listVideoSecrets error:",
         error
       );
 
@@ -601,20 +687,14 @@ exports.getVideoSecret =
       // Lesson
       // ---------------------------------------------------
 
-      const lessonSnap =
-        await db
-          .collection(
-            "lessons"
-          )
-          .doc(
-            lessonId
-          )
-          .get();
+      const lessonRecord =
+        await findLessonRecord(
+          db,
+          lessonId
+        );
 
       const lessonData =
-        lessonSnap.exists
-          ? lessonSnap.data() || {}
-          : {};
+        lessonRecord?.data || {};
 
       // ---------------------------------------------------
       // YouTube ID
@@ -635,7 +715,7 @@ exports.getVideoSecret =
 
           title:
             lessonData.title ||
-            "بدون عنوان",
+            "╪ذ╪»┘ê┘ ╪╣┘┘ê╪د┘",
 
           gradeId:
             lessonData.gradeId ||
@@ -651,6 +731,16 @@ exports.getVideoSecret =
             lessonData.unitId ||
             videoData.unitId ||
             "",
+
+          order:
+            Number.isFinite(Number(lessonData.order))
+              ? Number(lessonData.order)
+              : null,
+
+          previousExamRequirement:
+            lessonData.previousExamRequirement === "required"
+              ? "required"
+              : "none",
 
           publicLessonId:
             lessonData.publicLessonId ||
@@ -693,7 +783,7 @@ exports.getVideoSecret =
     } catch (error) {
 
       console.error(
-        "❌ getVideoSecret error:",
+        "ظإî getVideoSecret error:",
         error
       );
 
@@ -762,6 +852,15 @@ exports.saveVideoSecret =
           ? req.body.youtubeUrl.trim()
           : "";
 
+      // Optional lesson access rule.
+      // This is an internal admin setting and is never exposed to students.
+      const requestedPreviousExamRequirement =
+        req.body?.previousExamRequirement === "required"
+          ? "required"
+          : req.body?.previousExamRequirement === "none"
+            ? "none"
+            : null;
+
       // ---------------------------------------------------
       // Validate lesson ID
       // ---------------------------------------------------
@@ -810,23 +909,17 @@ exports.saveVideoSecret =
 
       // ---------------------------------------------------
       // Verify REAL lesson document
+      // Supports both the new top-level mirror and legacy
+      // nested lesson documents.
       // ---------------------------------------------------
 
-      const lessonRef =
-        db
-          .collection(
-            "lessons"
-          )
-          .doc(
-            lessonId
-          );
+      const lessonRecord =
+        await findLessonRecord(
+          db,
+          lessonId
+        );
 
-      const lessonSnap =
-        await lessonRef.get();
-
-      if (
-        !lessonSnap.exists
-      ) {
+      if (!lessonRecord) {
 
         return res.status(
           404
@@ -836,14 +929,67 @@ exports.saveVideoSecret =
             false,
 
           error:
-            "Lesson not found",
+            'Lesson not found',
 
         });
       }
 
       const lessonData =
-        lessonSnap.data() ||
-        {};
+        lessonRecord.data || {};
+
+      const previousExamRequirement =
+        requestedPreviousExamRequirement ||
+        (lessonData.previousExamRequirement === "required"
+          ? "required"
+          : "none");
+
+      const lessonRef =
+        db
+          .collection(
+            'lessons'
+          )
+          .doc(
+            lessonId
+          );
+
+      // Create/update the top-level mirror for legacy lessons.
+      await lessonRef.set(
+        {
+          id: lessonId,
+          title:
+            lessonData.title ||
+            '╪ذ╪»┘ê┘ ╪╣┘┘ê╪د┘',
+          description:
+            lessonData.description ||
+            '',
+          active:
+            lessonData.active !== false,
+          gradeId:
+            lessonData.gradeId ||
+            null,
+          subjectId:
+            lessonData.subjectId ||
+            null,
+          unitId:
+            lessonData.unitId ||
+            null,
+          publicLessonId:
+            lessonData.publicLessonId ||
+            null,
+          order:
+            Number.isFinite(Number(lessonData.order))
+              ? Number(lessonData.order)
+              : null,
+          previousExamRequirement,
+          updatedAt:
+            admin.firestore
+              .FieldValue
+              .serverTimestamp(),
+        },
+        {
+          merge: true,
+        }
+      );
 
       // ---------------------------------------------------
       // Generate new internal key
@@ -921,14 +1067,8 @@ exports.saveVideoSecret =
       // ---------------------------------------------------
       // Remove legacy video fields from lesson
       // ---------------------------------------------------
-      //
-      // We do this only after the protected video document
-      // has been written successfully.
-      //
-      // ---------------------------------------------------
 
-      await lessonRef.update({
-
+      const legacyVideoFields = {
         videoUrl:
           admin.firestore
             .FieldValue
@@ -948,8 +1088,28 @@ exports.saveVideoSecret =
           admin.firestore
             .FieldValue
             .delete(),
+      };
 
-      });
+      await lessonRef.update(
+        legacyVideoFields
+      );
+
+      for (
+        const nestedRef of
+          lessonRecord.nestedRefs || []
+      ) {
+        try {
+          await nestedRef.update(
+            legacyVideoFields
+          );
+        } catch (nestedError) {
+          console.warn(
+            'ظأبي╕ Could not update legacy nested lesson:',
+            nestedError?.message ||
+              nestedError
+          );
+        }
+      }
 
       // ---------------------------------------------------
       // Return secret
@@ -995,7 +1155,7 @@ exports.saveVideoSecret =
     } catch (error) {
 
       console.error(
-        "❌ saveVideoSecret error:",
+        "ظإî saveVideoSecret error:",
         error
       );
 
@@ -1114,7 +1274,7 @@ exports.deleteVideoSecret =
     } catch (error) {
 
       console.error(
-        "❌ deleteVideoSecret error:",
+        "ظإî deleteVideoSecret error:",
         error
       );
 

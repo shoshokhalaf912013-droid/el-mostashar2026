@@ -73,41 +73,20 @@ const ExamPage = () => {
   /* ================= منع إعادة دخول الامتحان ================= */
 
   useEffect(() => {
-    if (!examId) return;
+    if (!currentUser || !examId) return;
 
-    /*
-     * إذا كانت هناك نتيجة محفوظة لهذا الامتحان على هذا المتصفح،
-     * فلا نعيد فتح الامتحان عند عمل Refresh.
-     *
-     * النتيجة الحالية محفوظة محليًا كما هو مطبق في handleSubmit.
-     */
-    const savedResult = localStorage.getItem(
-      `exam_result_${examId}`
-    );
+    const checkResult = async () => {
+      /*
+       * حاليًا نترك نتيجة الامتحان محليًا في الواجهة.
+       *
+       * حفظ النتيجة النهائي سيتم ربطه بالـBackend
+       * بعد التأكد من تشغيل الامتحان.
+       */
+    };
 
-    if (savedResult) {
-      try {
-        const result = JSON.parse(savedResult);
+    checkResult();
 
-        setAnswers({});
-        setSubmitted(true);
-
-        console.log(
-          "Exam already completed:",
-          result
-        );
-      } catch (error) {
-        console.error(
-          "Invalid saved exam result:",
-          error
-        );
-
-        localStorage.removeItem(
-          `exam_result_${examId}`
-        );
-      }
-    }
-  }, [examId]);
+  }, [currentUser, examId]);
 
   /* ================= بدء الامتحان ================= */
 

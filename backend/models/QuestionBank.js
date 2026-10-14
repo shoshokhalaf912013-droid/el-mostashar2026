@@ -1,21 +1,16 @@
 const mongoose = require("mongoose");
 
-/*
-========================================================
-Question Bank
-بنك الأسئلة مستقل تمامًا عن الامتحانات
-========================================================
-*/
+const CHOICE_LABELS = ["أ", "ب", "ج", "د"];
 
-/* =========================
-   الاختيار من متعدد
-========================= */
+/* =========================================================
+   Choice Schema
+   ========================================================= */
 
 const choiceSchema = new mongoose.Schema(
   {
     label: {
       type: String,
-      enum: ["أ", "ب", "ج", "د"],
+      enum: CHOICE_LABELS,
       required: true,
     },
 
@@ -28,73 +23,101 @@ const choiceSchema = new mongoose.Schema(
   { _id: false }
 );
 
-/* =========================
-   معايير تصحيح السؤال المقالي
-========================= */
-
-const gradingCriterionSchema = new mongoose.Schema(
-  {
-    criterion: {
-      type: String,
-      required: true,
-      trim: true,
-    },
-
-    marks: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-  },
-  { _id: false }
-);
-
-/* =========================
-   السؤال
-========================= */
+/* =========================================================
+   Question Bank Schema
+   ========================================================= */
 
 const questionBankSchema = new mongoose.Schema(
   {
-    /* =====================
-       نص السؤال
-    ===================== */
-
     questionText: {
       type: String,
       required: true,
       trim: true,
     },
 
-    /* =====================
-       نوع السؤال
-       mcq   = اختيار من متعدد
-       essay = مقالي
-    ===================== */
+    normalizedText: {
+      type: String,
+      index: true,
+    },
 
     type: {
       type: String,
       enum: ["mcq", "essay"],
       required: true,
-      default: "mcq",
     },
 
-    /* =====================
-       الاختيارات
-       تستخدم فقط مع MCQ
-    ===================== */
+    /*
+     * IMPORTANT:
+     * ExamImport sends choices as strings:
+     *
+     * [
+     *   "الاختيار الأول",
+     *   "الاختيار الثاني",
+     *   "الاختيار الثالث",
+     *   "الاختيار الرابع"
+     * ]
+     *
+     * The database schema expects:
+     *
+     * [
+     *   { label: "أ", text: "..." },
+     *   { label: "ب", text: "..." },
+     *   { label: "ج", text: "..." },
+     *   { label: "د", text: "..." }
+     * ]
+     *
+     * So we normalize strings automatically here.
+     */
 
     choices: {
       type: [choiceSchema],
       default: [],
+
+      set: (choices) => {
+        if (!Array.isArray(choices)) {
+          return choices;
+        }
+
+        return choices.map((choice, index) => {
+          // Incoming value from ExamImport:
+          // "some choice text"
+          if (typeof choice === "string") {
+            return {
+              label: CHOICE_LABELS[index] || "",
+              text: choice,
+            };
+          }
+
+          // Already normalized object
+          if (choice && typeof choice === "object") {
+            return {
+              label:
+                choice.label ||
+                CHOICE_LABELS[index] ||
+                "",
+
+              text:
+                choice.text ??
+                choice.labelText ??
+                "",
+            };
+          }
+
+          return choice;
+        });
+      },
     },
 
-    /* =====================
-       الإجابة الصحيحة
-       0 = أ
-       1 = ب
-       2 = ج
-       3 = د
-    ===================== */
+    /*
+     * MCQ:
+     * 0 = أ
+     * 1 = ب
+     * 2 = ج
+     * 3 = د
+     *
+     * Can be null for imported questions whose answer
+     * has not been supplied yet.
+     */
 
     correctAnswer: {
       type: Number,
@@ -103,83 +126,76 @@ const questionBankSchema = new mongoose.Schema(
       default: null,
     },
 
-    /* =====================
-       نموذج الإجابة للمقالي
-    ===================== */
-
     modelAnswer: {
       type: String,
       default: "",
       trim: true,
     },
 
-    /* =====================
-       معايير التصحيح للمقالي
-    ===================== */
-
     gradingCriteria: {
-      type: [gradingCriterionSchema],
+      type: [String],
       default: [],
     },
-
-    /* =====================
-       الدرجة
-    ===================== */
 
     marks: {
       type: Number,
       default: 1,
-      min: 0,
     },
-
-    /* =====================
-       التصنيف التعليمي
-    ===================== */
 
     stageId: {
       type: String,
       default: "",
-      index: true,
+    },
+
+    systemId: {
+      type: String,
+      default: "",
     },
 
     gradeId: {
       type: String,
       default: "",
-      index: true,
     },
 
     subjectId: {
       type: String,
       default: "",
-      index: true,
     },
 
     unitId: {
       type: String,
       default: "",
-      index: true,
     },
 
     lessonId: {
       type: String,
       default: "",
-      index: true,
     },
 
-    /* =====================
-       مستوى الصعوبة
-    ===================== */
+    sectionId: {
+      type: String,
+      default: "",
+    },
+
+    sectionTitle: {
+      type: String,
+      default: "",
+    },
 
     difficulty: {
       type: String,
-      enum: ["easy", "medium", "hard"],
       default: "medium",
     },
 
-    /* =====================
-       مصدر السؤال
-    ===================== */
+    cognitiveLevel: {
+      type: String,
+      default: "",
+    },
 
+    /*
+     * IMPORTANT:
+     * imported_exam is now explicitly allowed.
+     */
     source: {
       type: String,
       enum: [
@@ -188,33 +204,30 @@ const questionBankSchema = new mongoose.Schema(
         "file",
         "mixed",
         "other",
+        "imported_exam",
       ],
       default: "teacher",
     },
 
-    /* =====================
-       اسم / وصف المصدر
-    ===================== */
-
     sourceName: {
       type: String,
       default: "",
-      trim: true,
     },
 
-    /* =====================
-       شرح إضافي
-    ===================== */
+    sourceDocument: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
+
+    sourcePage: {
+      type: mongoose.Schema.Types.Mixed,
+      default: null,
+    },
 
     explanation: {
       type: String,
       default: "",
-      trim: true,
     },
-
-    /* =====================
-       بيانات الذكاء الاصطناعي
-    ===================== */
 
     aiGenerated: {
       type: Boolean,
@@ -226,39 +239,41 @@ const questionBankSchema = new mongoose.Schema(
       default: false,
     },
 
-    /* =====================
-       منع تكرار السؤال
-    ===================== */
+    imported: {
+      type: Boolean,
+      default: false,
+    },
 
-    normalizedText: {
+    importBatchId: {
       type: String,
       default: "",
+    },
+
+    visualAssets: {
+      type: [mongoose.Schema.Types.Mixed],
+      default: [],
+    },
+
+    choiceLayout: {
+      type: String,
+      default: "vertical",
+    },
+
+    /*
+     * TRUE means that the question exists in the Question Bank
+     * but its answer has not been resolved yet.
+     *
+     * This is intentionally different from "not saved".
+     */
+    unresolved: {
+      type: Boolean,
+      default: false,
       index: true,
     },
-
-    /* =====================
-       إحصائيات الاستخدام
-    ===================== */
-
-    usageCount: {
-      type: Number,
-      default: 0,
-      min: 0,
-    },
-
-    lastUsedAt: {
-      type: Date,
-      default: null,
-    },
-
-    /* =====================
-       الحالة
-    ===================== */
 
     active: {
       type: Boolean,
       default: true,
-      index: true,
     },
   },
   {
@@ -266,36 +281,34 @@ const questionBankSchema = new mongoose.Schema(
   }
 );
 
-/*
-========================================================
-تطبيع نص السؤال
-يساعد في منع إدخال السؤال نفسه أكثر من مرة
-========================================================
-*/
+/* =========================================================
+   Helper
+   ========================================================= */
 
-questionBankSchema.pre("save", function () {
-  if (this.questionText) {
-    this.normalizedText = this.questionText
-      .replace(/\s+/g, " ")
-      .trim()
-      .toLowerCase();
-  }
-});
+function isImportedExamQuestion(doc) {
+  return (
+    doc.imported === true &&
+    doc.source === "imported_exam"
+  );
+}
 
-/*
-========================================================
-Validation
-========================================================
-*/
+/* =========================================================
+   PRE VALIDATE
+   ========================================================= */
 
 questionBankSchema.pre("validate", function () {
-  /* =========================
+  const isImportedExam = isImportedExamQuestion(this);
+
+  /* -------------------------------------------------------
      MCQ
-  ========================= */
+     ------------------------------------------------------- */
 
   if (this.type === "mcq") {
+    /*
+     * Every MCQ must always have exactly 4 choices.
+     */
     if (
-      !this.choices ||
+      !Array.isArray(this.choices) ||
       this.choices.length !== 4
     ) {
       throw new Error(
@@ -303,100 +316,151 @@ questionBankSchema.pre("validate", function () {
       );
     }
 
-    if (
-      this.correctAnswer === null ||
-      this.correctAnswer === undefined
-    ) {
-      throw new Error(
-        "يجب تحديد الإجابة الصحيحة لسؤال الاختيار من متعدد."
-      );
-    }
-
-    if (
-      this.correctAnswer < 0 ||
-      this.correctAnswer > 3
-    ) {
-      throw new Error(
-        "الإجابة الصحيحة يجب أن تكون بين 0 و3."
-      );
-    }
-
     /*
-    لا نحتاج نموذج إجابة
-    أو معايير تصحيح للمقالي
-    */
+     * For imported exams:
+     *
+     * Answer is OPTIONAL.
+     *
+     * Without answer => unresolved = true
+     *
+     * With answer => unresolved = false
+     */
 
-    this.modelAnswer = "";
-    this.gradingCriteria = [];
+    if (isImportedExam) {
+      const answerMissing =
+        this.correctAnswer === null ||
+        this.correctAnswer === undefined;
+
+      this.unresolved = answerMissing;
+
+      /*
+       * If an answer exists, it must still be valid.
+       */
+      if (!answerMissing) {
+        if (
+          this.correctAnswer < 0 ||
+          this.correctAnswer > 3
+        ) {
+          throw new Error(
+            "الإجابة الصحيحة يجب أن تكون بين 0 و3."
+          );
+        }
+      }
+    } else {
+      /*
+       * Normal questions remain strict.
+       */
+      if (
+        this.correctAnswer === null ||
+        this.correctAnswer === undefined
+      ) {
+        throw new Error(
+          "يجب تحديد الإجابة الصحيحة لسؤال الاختيار من متعدد."
+        );
+      }
+
+      if (
+        this.correctAnswer < 0 ||
+        this.correctAnswer > 3
+      ) {
+        throw new Error(
+          "الإجابة الصحيحة يجب أن تكون بين 0 و3."
+        );
+      }
+
+      this.unresolved = false;
+    }
   }
 
-  /* =========================
-     ESSAY
-  ========================= */
+  /* -------------------------------------------------------
+     Essay
+     ------------------------------------------------------- */
+
+  if (this.type === "essay") {
+    const answerMissing =
+      !String(this.modelAnswer || "").trim();
+
+    /*
+     * Imported essay questions can be saved without
+     * model answer.
+     */
+    if (isImportedExam) {
+      this.unresolved = answerMissing;
+    } else {
+      /*
+       * Normal essay questions remain strict.
+       */
+      if (answerMissing) {
+        throw new Error(
+          "السؤال المقالي يحتاج إلى نموذج إجابة."
+        );
+      }
+
+      this.unresolved = false;
+    }
+  }
+});
+
+/* =========================================================
+   PRE SAVE
+   ========================================================= */
+
+questionBankSchema.pre("save", function () {
+  /* -------------------------------------------------------
+     Normalize question text
+     ------------------------------------------------------- */
+
+  if (this.questionText) {
+    this.normalizedText = this.questionText
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+  }
+
+  /* -------------------------------------------------------
+     MCQ
+     ------------------------------------------------------- */
+
+  if (this.type === "mcq") {
+    /*
+     * MCQ does not use essay grading fields.
+     */
+    this.modelAnswer = "";
+    this.gradingCriteria = [];
+
+    /*
+     * Keep unresolved status synchronized.
+     */
+    if (isImportedExamQuestion(this)) {
+      this.unresolved =
+        this.correctAnswer === null ||
+        this.correctAnswer === undefined;
+    } else {
+      this.unresolved = false;
+    }
+  }
+
+  /* -------------------------------------------------------
+     Essay
+     ------------------------------------------------------- */
 
   if (this.type === "essay") {
     this.choices = [];
     this.correctAnswer = null;
+    this.choiceLayout = "vertical";
+
+    if (isImportedExamQuestion(this)) {
+      this.unresolved =
+        !String(this.modelAnswer || "").trim();
+    } else {
+      this.unresolved = false;
+    }
   }
 });
 
-/*
-========================================================
-Indexes
-========================================================
-
-البنك مصنف أساسًا حسب الدرس.
-========================================================
-*/
-
-questionBankSchema.index({
-  stageId: 1,
-  gradeId: 1,
-  subjectId: 1,
-  unitId: 1,
-  lessonId: 1,
-  active: 1,
-});
-
-questionBankSchema.index({
-  lessonId: 1,
-  type: 1,
-  active: 1,
-});
-
-questionBankSchema.index({
-  lessonId: 1,
-  difficulty: 1,
-  active: 1,
-});
-
-/*
-========================================================
-منع التكرار داخل نفس الدرس
-========================================================
-
-السؤال نفسه لا يتكرر في نفس الدرس طالما أنه active.
-========================================================
-*/
-
-questionBankSchema.index(
-  {
-    lessonId: 1,
-    normalizedText: 1,
-  },
-  {
-    unique: true,
-    partialFilterExpression: {
-      active: true,
-    },
-  }
-);
-
-/*
-========================================================
-EXPORT
-========================================================
-*/
+/* =========================================================
+   Export
+   ========================================================= */
 
 module.exports = mongoose.model(
   "QuestionBank",

@@ -1,319 +1,130 @@
 // src/pages/Student/ExamResult.jsx
 
-import React, {
-  useEffect,
-  useMemo,
-  useState,
-} from "react";
-
-import {
-  useNavigate,
-  useParams,
-} from "react-router-dom";
-
-import api from "../../utils/api";
+import React from "react";
+import { useLocation, Link } from "react-router-dom";
 
 export default function ExamResult() {
-  const { id } = useParams();
-  const navigate = useNavigate();
+  const location = useLocation();
 
-  const [attempt, setAttempt] = useState(null);
-  const [exam, setExam] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const {
+    score = 0,
+    total = 1,
+    pendingEssayCount = 0,
+  } = location.state || {};
 
-  /*
-  ============================================================
-  تحميل النتيجة من الـBackend
-  ============================================================
-
-  مهم جدًا:
-  لا نعتمد على location.state لأن state يختفي عند Refresh.
-
-  الرابط:
-  /student/exam-result/:id
-
-  والـ id هنا هو attempt id.
-  ============================================================
-  */
-  useEffect(() => {
-    let cancelled = false;
-
-    const loadResult = async () => {
-      if (!id) {
-        setError("لم يتم العثور على رقم المحاولة.");
-        setLoading(false);
-        return;
-      }
-
-      try {
-        setLoading(true);
-        setError("");
-
-        /*
-        --------------------------------------------------------
-        1) تحميل المحاولة
-        --------------------------------------------------------
-        */
-        const attemptResponse = await api.get(
-          `/api/attempts/${id}`
-        );
-
-        const loadedAttempt =
-          attemptResponse.data?.attempt;
-
-        if (!loadedAttempt) {
-          throw new Error(
-            "لم يتم العثور على نتيجة هذه المحاولة."
-          );
-        }
-
-        /*
-        --------------------------------------------------------
-        2) تحميل الامتحان
-        --------------------------------------------------------
-        نحتاج الامتحان لحساب إجمالي الدرجات الحقيقي.
-        --------------------------------------------------------
-        */
-        const examId =
-          loadedAttempt.examId ||
-          loadedAttempt.exam?._id ||
-          loadedAttempt.exam?.id;
-
-        if (!examId) {
-          throw new Error(
-            "تعذر تحديد الامتحان المرتبط بالمحاولة."
-          );
-        }
-
-        const examResponse = await api.get(
-          `/api/exams/${examId}`
-        );
-
-        const loadedExam =
-          examResponse.data?.exam;
-
-        if (!loadedExam) {
-          throw new Error(
-            "تعذر تحميل بيانات الامتحان."
-          );
-        }
-
-        if (cancelled) return;
-
-        setAttempt(loadedAttempt);
-        setExam(loadedExam);
-      } catch (err) {
-        console.error(
-          "ExamResult load error:",
-          err
-        );
-
-        if (!cancelled) {
-          setError(
-            err?.response?.data?.message ||
-              err?.response?.data?.error ||
-              err?.message ||
-              "تعذر تحميل نتيجة الامتحان."
-          );
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    };
-
-    loadResult();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [id]);
+  const safeScore = Number(score) || 0;
+  const safeTotal = Number(total) || 0;
+  const safePendingEssayCount =
+    Number(pendingEssayCount) || 0;
 
   /*
-  ============================================================
-  إجمالي الدرجات الحقيقي
-  ============================================================
-  */
-  const totalMarks = useMemo(() => {
-    if (!exam?.questions?.length) {
-      return 0;
-    }
+  ========================================================
+  INTERNAL PASS RULE
+  ========================================================
 
-    return exam.questions.reduce(
-      (sum, question) =>
-        sum + (Number(question?.marks) || 1),
-      0
-    );
-  }, [exam]);
+  60% is intentionally kept as an internal rule only.
+  It is NOT displayed to the student.
+
+  Reports/admin systems remain responsible for monitoring
+  the student's actual performance.
+  ========================================================
+  */
+
+  const passed =
+    safeTotal > 0 &&
+    safeScore / safeTotal >= 0.6;
 
   /*
-  ============================================================
-  الدرجة
-  ============================================================
+  Prevent unused-variable issues while keeping the
+  internal rule available for future/report logic.
   */
-  const score = useMemo(() => {
-    return Number(attempt?.score) || 0;
-  }, [attempt]);
+  void passed;
 
-  /*
-  ============================================================
-  النسبة
-  ============================================================
-  */
-  const percentage = useMemo(() => {
-    if (totalMarks <= 0) {
-      return 0;
-    }
+  const hasPendingEssays =
+    safePendingEssayCount > 0;
 
-    return Math.round(
-      (score / totalMarks) * 100
-    );
-  }, [score, totalMarks]);
-
-  /*
-  ============================================================
-  حالات خاصة بالمقالي
-  ============================================================
-  */
-  const pendingEssayCount =
-    Number(
-      attempt?.pendingEssayCount
-    ) || 0;
-
-  /*
-  ============================================================
-  Loading
-  ============================================================
-  */
-  if (loading) {
-    return (
-      <div
-        className="min-h-screen bg-black text-white flex items-center justify-center p-6"
-        dir="rtl"
-      >
-        <div className="text-yellow-400 text-xl">
-          جاري تحميل النتيجة...
-        </div>
-      </div>
-    );
-  }
-
-  /*
-  ============================================================
-  Error
-  ============================================================
-  */
-  if (error || !attempt || !exam) {
-    return (
-      <div
-        className="min-h-screen bg-black text-white flex items-center justify-center p-6"
-        dir="rtl"
-      >
-        <div
-          className="w-full max-w-xl rounded-2xl p-8 text-center"
-          style={{
-            background: "#111",
-            border: "1px solid #444",
-          }}
-        >
-          <h2 className="text-xl text-red-400 mb-4">
-            تعذر تحميل النتيجة
-          </h2>
-
-          <p className="text-gray-300 mb-6">
-            {error || "بيانات النتيجة غير متاحة."}
-          </p>
-
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="px-8 py-3 rounded-xl bg-yellow-400 text-black font-bold"
-          >
-            ← رجوع
-          </button>
-        </div>
-      </div>
-    );
-  }
-
-  /*
-  ============================================================
-  Render
-  ============================================================
-  */
   return (
     <div
-      className="min-h-screen bg-black text-white p-6"
+      className="p-6 text-white text-center min-h-screen"
       dir="rtl"
     >
-      <div className="max-w-3xl mx-auto">
+      <h1 className="text-3xl text-yellow-400 font-bold mb-6">
+        نتيجة الامتحان
+      </h1>
 
-        {/* العودة */}
-        <div className="flex justify-start mb-8">
-          <button
-            type="button"
-            onClick={() => navigate(-1)}
-            className="px-7 py-3 rounded-xl bg-yellow-400 text-black font-bold"
-          >
-            ← رجوع
-          </button>
+      <div className="bg-gray-900 p-6 rounded-lg max-w-2xl mx-auto">
+
+        {/* =========================
+            CURRENT SCORE
+        ========================= */}
+
+        <div className="mb-6">
+          <p className="text-xl mb-3">
+            الدرجة الحالية
+          </p>
+
+          <p className="text-4xl font-bold text-green-400">
+            {safeScore}{" "}
+            <span className="text-2xl text-white">
+              من {safeTotal}
+            </span>
+          </p>
         </div>
 
-        {/* بطاقة النتيجة */}
-        <div
-          className="rounded-2xl p-8 text-center"
-          style={{
-            background: "#111",
-            border: "1px solid #333",
-            boxShadow:
-              "0 0 25px rgba(255,215,0,0.08)",
-          }}
-        >
-          <h1 className="text-3xl md:text-4xl text-yellow-400 mb-8">
-            {exam.title}
-          </h1>
 
-          <div
-            className="rounded-2xl p-8"
-            style={{
-              background: "#111",
-              border: "1px solid #444",
-            }}
-          >
-            <p className="text-yellow-400 text-lg mb-3">
-              تم إنهاء الامتحان بنجاح 🎉
+        {/* =========================
+            PENDING ESSAYS
+        ========================= */}
+
+        {hasPendingEssays && (
+          <div className="bg-yellow-900/40 border border-yellow-600 rounded-lg p-5 mb-6">
+
+            <h2 className="text-xl font-bold text-yellow-400 mb-3">
+              توجد أسئلة مقالية في انتظار التصحيح
+            </h2>
+
+            <p className="text-gray-200 leading-7">
+              تم تسليم امتحانك بنجاح، ولكن توجد{" "}
+              <span className="font-bold text-yellow-400">
+                {safePendingEssayCount}
+              </span>{" "}
+              أسئلة مقالية لم يتم تصحيحها بواسطة المدرس بعد.
             </p>
 
-            <p className="text-gray-300 mb-3">
-              نتيجتك:
+            <p className="text-gray-400 mt-3 text-sm leading-6">
+              الدرجة الحالية لا تمثل النتيجة النهائية
+              حتى يتم الانتهاء من تصحيح الأسئلة المقالية.
             </p>
 
-            <p
-              className="text-yellow-400 font-bold"
-              style={{
-                fontSize: "46px",
-                lineHeight: 1.2,
-              }}
-            >
-              {score} / {totalMarks}
-            </p>
-
-            <p className="text-yellow-400 text-xl mt-4">
-              الدرجة: {percentage}%
-            </p>
-
-            {pendingEssayCount > 0 && (
-              <div className="mt-6 rounded-xl p-4 bg-gray-900 border border-gray-700">
-                <p className="text-yellow-400">
-                  يوجد {pendingEssayCount} سؤال مقالي
-                  في انتظار التصحيح.
-                </p>
-              </div>
-            )}
           </div>
-        </div>
+        )}
+
+
+        {/* =========================
+            NO PASS / FAIL MESSAGE
+            INTENTIONALLY HIDDEN
+        ========================= */}
+
+        {!hasPendingEssays && (
+          <div className="bg-gray-800/40 border border-gray-700 rounded-lg p-4 mb-6">
+            <p className="text-gray-300">
+              تم تسجيل نتيجة الامتحان بنجاح.
+            </p>
+          </div>
+        )}
+
+
+        {/* =========================
+            BACK TO EXAMS
+        ========================= */}
+
+        <Link
+          to="/exam"
+          className="bg-blue-600 hover:bg-blue-700 px-6 py-3 block rounded transition"
+        >
+          العودة للامتحانات
+        </Link>
+
       </div>
     </div>
   );

@@ -170,6 +170,32 @@ export default function LessonPlayer({
   ] =
     useState(false);
 
+  // Canonical YouTube URL is only loaded for Super Admin.
+  // Students and other roles never request this protected secret endpoint.
+  const [
+    superAdminYoutubeUrl,
+    setSuperAdminYoutubeUrl,
+  ] =
+    useState("");
+
+  const [
+    superAdminVideoInput,
+    setSuperAdminVideoInput,
+  ] =
+    useState("");
+
+  const [
+    superAdminVideoSaving,
+    setSuperAdminVideoSaving,
+  ] =
+    useState(false);
+
+  const [
+    superAdminVideoMessage,
+    setSuperAdminVideoMessage,
+  ] =
+    useState("");
+
   // =======================================================
   // ROTATING PLAYBACK SESSION
   // =======================================================
@@ -345,9 +371,67 @@ export default function LessonPlayer({
       false
     );
 
+    setSuperAdminYoutubeUrl("");
+    setSuperAdminVideoInput("");
+    setSuperAdminVideoMessage("");
+    setSuperAdminVideoSaving(false);
+
   }, [
     actualLessonId,
   ]);
+
+  // =======================================================
+  // SUPER ADMIN — CANONICAL YOUTUBE URL
+  // =======================================================
+  // The protected backend returns this value only to Super Admin.
+  useEffect(() => {
+    if (role !== "super-admin" || !actualLessonId) {
+      setSuperAdminYoutubeUrl("");
+      return undefined;
+    }
+
+    let cancelled = false;
+
+    const loadSuperAdminYoutubeUrl = async () => {
+      try {
+        const response = await api.get(
+          `/api/video-secrets/${encodeURIComponent(actualLessonId)}`
+        );
+
+        if (!cancelled) {
+          const youtubeUrl =
+            response.data?.video?.youtubeUrl ||
+            "";
+
+          setSuperAdminYoutubeUrl(
+            youtubeUrl
+          );
+
+          setSuperAdminVideoInput(
+            youtubeUrl
+          );
+        }
+      } catch (error) {
+        if (!cancelled && error?.response?.status !== 404) {
+          console.error(
+            "❌ Super Admin YouTube URL load error:",
+            error
+          );
+        }
+
+        if (!cancelled) {
+          setSuperAdminYoutubeUrl("");
+          setSuperAdminVideoInput("");
+        }
+      }
+    };
+
+    loadSuperAdminYoutubeUrl();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [role, actualLessonId]);
 
 
   // =======================================================
@@ -928,7 +1012,19 @@ useEffect(() => {
 
   const rotate = async () => {
     try {
-      currentVideoTimeRef.current = 0;
+      // Keep the last known playback position while asking YouTube
+      // for a fresh currentTime reading. Resetting this ref to 0
+      // creates a race where the new Gate can be generated from 0:00.
+      const previousVideoTime =
+        Number.isFinite(
+          Number(
+            currentVideoTimeRef.current
+          )
+        )
+          ? Number(
+              currentVideoTimeRef.current
+            )
+          : 0;
 
       const iframe = youtubeIframeRef.current;
       if (iframe?.contentWindow) {
@@ -944,7 +1040,15 @@ useEffect(() => {
         } catch (_) {}
       }
 
-      await new Promise((resolve) => window.setTimeout(resolve, 300));
+      // Give the Gate/YouTube bridge enough time to deliver
+      // the refreshed infoDelivery currentTime message.
+      await new Promise(
+        (resolve) =>
+          window.setTimeout(
+            resolve,
+            750
+          )
+      );
 
       const response = await api.get(
         `/api/videos/${encodeURIComponent(actualLessonId)}/access`
@@ -955,12 +1059,38 @@ useEffect(() => {
       const nextGateUrl = video?.gateUrl || "";
       if (!nextGateUrl) throw new Error("New playback gate was not issued");
 
-      const start = Math.max(0, Math.floor(currentVideoTimeRef.current || 0));
-      const url = new URL(nextGateUrl, window.location.origin);
+      const start = Math.max(
+        0,
+        Math.floor(
+          Number.isFinite(
+            Number(
+              currentVideoTimeRef.current
+            )
+          )
+            ? Number(
+                currentVideoTimeRef.current
+              )
+            : previousVideoTime
+        )
+      );
+
+      const url = new URL(
+        nextGateUrl,
+        window.location.origin
+      );
       if (start > 0) url.searchParams.set("start", String(start));
 
-      setPlaybackSession(video.playbackSession || null);
-      setVideoUrl(url.toString());
+      console.log(
+        "🔄 Video session rotated at second:",
+        start
+      );
+
+      setPlaybackSession(
+        video.playbackSession || null
+      );
+      setVideoUrl(
+        url.toString()
+      );
     } catch (error) {
       if (!cancelled) console.error("❌ Playback session rotation failed:", error);
     }
@@ -1096,6 +1226,112 @@ useEffect(() => {
         }
       );
     };
+
+
+  // =======================================================
+  // SUPER ADMIN — SAVE / REPLACE VIDEO
+  // =======================================================
+
+  const saveSuperAdminVideo = async () => {
+    if (role !== "super-admin" || !actualLessonId) {
+      return;
+    }
+
+    const cleanVideoUrl =
+      superAdminVideoInput.trim();
+
+    if (!cleanVideoUrl) {
+      setSuperAdminVideoMessage(
+        "اكتب رابط فيديو YouTube أولًا."
+      );
+      return;
+    }
+
+    try {
+      setSuperAdminVideoSaving(true);
+      setSuperAdminVideoMessage("");
+
+      const response =
+        await api.post(
+          `/api/video-secrets/${encodeURIComponent(
+            actualLessonId
+          )}`,
+          {
+            youtubeUrl: cleanVideoUrl,
+          }
+        );
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.error ||
+            "فشل حفظ فيديو الدرس."
+        );
+      }
+
+      setSuperAdminYoutubeUrl(
+        cleanVideoUrl
+      );
+
+      setSuperAdminVideoInput(
+        cleanVideoUrl
+      );
+
+      // Refresh the protected gate immediately so the new video
+      // can be previewed by Super Admin without treating the page
+      // like a student playback screen.
+      const accessResponse =
+        await api.get(
+          `/api/videos/${encodeURIComponent(
+            actualLessonId
+          )}/access`
+        );
+
+      const video =
+        accessResponse.data?.video ||
+        null;
+
+      const gateUrl =
+        video?.gateUrl ||
+        "";
+
+      if (gateUrl) {
+        setVideoAvailable(true);
+        setVideoUrl(gateUrl);
+        setPlaybackSession(
+          video.playbackSession ||
+            null
+        );
+        setVideoUnlocked(true);
+      }
+
+      setSuperAdminVideoMessage(
+        "✅ تم حفظ الفيديو وتحديث التشغيل."
+      );
+    } catch (error) {
+      console.error(
+        "❌ Super Admin video save error:",
+        error
+      );
+
+      const status =
+        error?.response?.status;
+
+      const backendError =
+        error?.response?.data?.error;
+
+      setSuperAdminVideoMessage(
+        backendError ||
+          (status === 403
+            ? "ليس لديك صلاحية لحفظ الفيديو. يجب أن يكون الحساب Super Admin."
+            : status === 401
+            ? "انتهت جلسة تسجيل الدخول. سجّل الدخول مرة أخرى."
+            : error?.message ||
+              "تعذر حفظ فيديو الدرس.")
+      );
+    } finally {
+      setSuperAdminVideoSaving(false);
+    }
+  };
 
 
   // =======================================================
@@ -1678,15 +1914,36 @@ useEffect(() => {
           </button>
 
 
-          <button
-            className="gold-btn"
+          {isStudent ? (
 
-            onClick={
-              joinLiveStream
-            }
-          >
-            🎥 دخول البث المباشر
-          </button>
+            <button
+              type="button"
+              className="gold-btn"
+              disabled
+              aria-disabled="true"
+              title="البث المباشر مغلق حاليًا"
+              style={{
+                opacity: 0.45,
+                cursor: "not-allowed",
+                filter: "grayscale(0.35)",
+              }}
+            >
+              🔒 البث المباشر مغلق حاليًا
+            </button>
+
+          ) : (
+
+            <button
+              className="gold-btn"
+
+              onClick={
+                joinLiveStream
+              }
+            >
+              🎥 دخول البث المباشر
+            </button>
+
+          )}
 
         </div>
 
@@ -1706,6 +1963,8 @@ useEffect(() => {
         </h3>
 
 
+                {isStudent && (
+                  <>
                   {/* =================================================
                       PLAYBACK SPEED CONTROLS
                   ================================================== */}
@@ -1769,7 +2028,8 @@ useEffect(() => {
                       )
                     )}
                   </div>
-
+                  </>
+                )}
 
 
         <div
@@ -1878,6 +2138,162 @@ useEffect(() => {
                 لا يوجد فيديو متاح لهذا الدرس
               </h4>
 
+            </div>
+          )}
+
+
+          {/* =============================================
+              SUPER ADMIN — VIDEO MANAGEMENT
+          ============================================= */}
+
+          {role === "super-admin" && (
+            <div
+              style={{
+                marginBottom: "18px",
+                padding: "16px",
+                borderRadius: "12px",
+                background: "rgba(255,215,0,0.06)",
+                border: "1px solid rgba(255,215,0,0.32)",
+              }}
+            >
+              <div
+                style={{
+                  color: "#ffd700",
+                  fontWeight: "800",
+                  marginBottom: "8px",
+                  fontSize: "16px",
+                }}
+              >
+                🎬 إدارة فيديو الدرس — Super Admin
+              </div>
+
+              <div
+                style={{
+                  color: "#ccc",
+                  fontSize: "13px",
+                  lineHeight: 1.7,
+                  marginBottom: "10px",
+                }}
+              >
+                من هنا ترفع أو تغيّر رابط فيديو YouTube المستخدم في نظام الحماية.
+              </div>
+
+              <div
+                style={{
+                  display: "flex",
+                  gap: "10px",
+                  alignItems: "stretch",
+                  flexWrap: "wrap",
+                }}
+              >
+                <input
+                  type="url"
+                  value={superAdminVideoInput}
+                  onChange={(event) => {
+                    setSuperAdminVideoInput(
+                      event.target.value
+                    );
+                    setSuperAdminVideoMessage("");
+                  }}
+                  placeholder="ألصق رابط YouTube هنا"
+                  dir="ltr"
+                  aria-label="رابط فيديو YouTube"
+                  style={{
+                    flex: "1 1 420px",
+                    minWidth: 0,
+                    padding: "11px 12px",
+                    borderRadius: "9px",
+                    border: "1px solid rgba(255,215,0,0.25)",
+                    background: "#090909",
+                    color: "#fff",
+                    outline: "none",
+                    boxSizing: "border-box",
+                  }}
+                />
+
+                <button
+                  type="button"
+                  onClick={saveSuperAdminVideo}
+                  disabled={superAdminVideoSaving}
+                  style={{
+                    background: "#ffd000",
+                    color: "#000",
+                    border: "none",
+                    borderRadius: "9px",
+                    padding: "11px 18px",
+                    fontWeight: "800",
+                    cursor: superAdminVideoSaving
+                      ? "wait"
+                      : "pointer",
+                    whiteSpace: "nowrap",
+                    opacity: superAdminVideoSaving
+                      ? 0.7
+                      : 1,
+                  }}
+                >
+                  {superAdminVideoSaving
+                    ? "⏳ جاري الحفظ..."
+                    : "⬆️ رفع / تغيير الفيديو"}
+                </button>
+
+                {superAdminYoutubeUrl && (
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      try {
+                        await navigator.clipboard.writeText(
+                          superAdminYoutubeUrl
+                        );
+                        setSuperAdminVideoMessage(
+                          "✅ تم نسخ الرابط الحالي."
+                        );
+                      } catch (error) {
+                        console.error(
+                          "❌ Copy YouTube URL failed:",
+                          error
+                        );
+                      }
+                    }}
+                    style={{
+                      background: "#111",
+                      color: "#ffd700",
+                      border: "1px solid rgba(255,215,0,0.45)",
+                      borderRadius: "9px",
+                      padding: "11px 16px",
+                      fontWeight: "800",
+                      cursor: "pointer",
+                      whiteSpace: "nowrap",
+                    }}
+                  >
+                    📋 نسخ الرابط الحالي
+                  </button>
+                )}
+              </div>
+
+              {superAdminVideoMessage && (
+                <div
+                  style={{
+                    marginTop: "10px",
+                    color: "#fff",
+                    fontSize: "13px",
+                    fontWeight: "700",
+                  }}
+                >
+                  {superAdminVideoMessage}
+                </div>
+              )}
+
+              {superAdminYoutubeUrl && (
+                <div
+                  style={{
+                    marginTop: "10px",
+                    color: "#aaa",
+                    fontSize: "12px",
+                  }}
+                >
+                  الرابط المحفوظ حاليًا: محفوظ داخل نظام الفيديو المحمي.
+                </div>
+              )}
             </div>
           )}
 
@@ -2120,6 +2536,65 @@ useEffect(() => {
                     }}
                   />
 
+
+                  {/* =================================================
+                      YOUTUBE TITLE CLICK SHIELD
+                      -------------------------------------------------
+                      Transparent fixed shield over the upper part of
+                      the YouTube iframe. It prevents accidental clicks
+                      on the clickable YouTube title / outbound header
+                      while keeping the rest of the player interactive.
+
+                      The shield is intentionally independent from the
+                      video loading state, so it also works while the
+                      preview image is blurred/loading.
+                  ================================================== */}
+
+                  <div
+                    aria-hidden="true"
+                    onContextMenu={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }}
+                    onPointerDown={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }}
+                    onPointerUp={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }}
+                    onClick={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }}
+                    onMouseDown={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }}
+                    onMouseUp={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }}
+                    onTouchStart={(event) => {
+                      event.preventDefault();
+                      event.stopPropagation();
+                    }}
+                    style={{
+                      position: "absolute",
+                      top: 0,
+                      left: 0,
+                      right: 0,
+                      height: "78px",
+                      zIndex: 1000,
+                      background: "transparent",
+                      pointerEvents: "auto",
+                      userSelect: "none",
+                      WebkitUserSelect: "none",
+                      touchAction: "none",
+                      cursor: "default",
+                    }}
+                  />
 
                   {/* =================================================
                       YOUTUBE OUTBOUND CLICK SHIELD

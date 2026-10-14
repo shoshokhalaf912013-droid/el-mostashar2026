@@ -9,11 +9,13 @@ import {
   orderBy,
   doc,
   setDoc,
+  deleteDoc,
   serverTimestamp,
 } from "firebase/firestore";
 
 import { db } from "../../firebase";
 import { lessonRef } from "../../utils/lessonRef";
+import api from "../../utils/api";
 import useUserRole from "../../hooks/useUserRole";
 
 /* =========================================================
@@ -156,6 +158,9 @@ export default function AddLesson() {
   const [loading, setLoading] = useState(false);
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState("");
+
+  // إظهار/إخفاء إدخال رابط YouTube
+  const [showVideoInput, setShowVideoInput] = useState(false);
 
   /* =======================================================
      LOAD GRADES
@@ -383,6 +388,21 @@ export default function AddLesson() {
       return;
     }
 
+    /* ====================================================
+       PROTECTED VIDEO PERMISSION
+
+       حفظ فيديو YouTube داخل lessonVideos يتم فقط عبر
+       Backend المحمي، والـBackend يشترط Super Admin.
+       لذلك نمنع إرسال فيديو من Teacher/Admin قبل إنشاء
+       الدرس حتى لا ينشأ درس ناقص بدون الفيديو المطلوب.
+    ==================================================== */
+    if (videoUrl.trim() && role !== "super-admin") {
+      setError(
+        "إضافة فيديو محمي للدرس متاحة فقط لحساب Super Admin. أنشئ الدرس بدون فيديو، ثم أضف الفيديو من إدارة الفيديو المحمية."
+      );
+      return;
+    }
+
     try {
       setLoading(true);
 
@@ -452,53 +472,97 @@ export default function AddLesson() {
       });
 
       /* ====================================================
-         حفظ الفيديو في وثيقة منفصلة محمية
-         لا يستطيع الطالب قراءتها إلا باشتراك فعال.
+         ROOT LESSON DOCUMENT
+
+         نظام حماية الفيديو في الـBackend يعتمد على:
+         lessons/{lessonId}
+
+         لذلك نحافظ على نفس lessonId في الـroot collection،
+         مع إبقاء المرجع المتداخل المستخدم في إدارة المنهج.
+      ==================================================== */
+
+      await setDoc(
+        doc(db, "lessons", newLessonId),
+        {
+          id: newLessonId,
+          publicLessonId,
+          title: title.trim(),
+          description: description.trim(),
+          teacherId: null,
+          pdfUrl: "",
+          imageUrl: "",
+          active: true,
+          gradeId,
+          subjectId,
+          unitId,
+          createdAt: serverTimestamp(),
+          updatedAt: serverTimestamp(),
+        },
+        { merge: true }
+      );
+
+      /* ====================================================
+         حفظ الفيديو عبر نظام الحماية المركزي
+         لا نحفظ videoUrl / embed URL مباشرة من الواجهة.
+         الـBackend مسؤول عن youtubeVideoId + videoKey.
       ==================================================== */
       if (videoUrl.trim()) {
-        let videoId = null;
+        const cleanVideoUrl = videoUrl.trim();
 
         try {
-          const parsed = new URL(videoUrl.trim());
-
-          if (parsed.hostname.includes("youtu.be")) {
-            videoId = parsed.pathname.replace(/^\//, "").split("/")[0] || null;
-          } else if (parsed.hostname.includes("youtube.com")) {
-            videoId = parsed.searchParams.get("v");
-
-            if (!videoId) {
-              const parts = parsed.pathname.split("/").filter(Boolean);
-              const index = parts.findIndex((part) =>
-                ["embed", "shorts", "live"].includes(part)
-              );
-
-              if (index !== -1 && parts[index + 1]) {
-                videoId = parts[index + 1];
+          try {
+            const response = await api.post(
+              `/api/video-secrets/${encodeURIComponent(newLessonId)}`,
+              {
+                youtubeUrl: cleanVideoUrl,
               }
+            );
+
+            if (!response.data?.success) {
+              throw new Error(
+                response.data?.error ||
+                  "فشل حفظ فيديو الدرس."
+              );
             }
+          } catch (requestError) {
+            const status = requestError?.response?.status;
+            const backendError =
+              requestError?.response?.data?.error;
+
+            throw new Error(
+              backendError ||
+                (status === 403
+                  ? "ليس لديك صلاحية لحفظ فيديو الدرس. يجب أن يكون حسابك بصلاحية Super Admin."
+                  : status === 401
+                  ? "انتهت جلسة تسجيل الدخول. يرجى تسجيل الدخول مرة أخرى."
+                  : requestError?.message ||
+                    "فشل حفظ فيديو الدرس.")
+            );
           }
         } catch (videoError) {
-          console.error("❌ Invalid YouTube URL:", videoError);
-        }
+          console.error("❌ Protected video save error:", videoError);
 
-        if (!videoId) {
-          throw new Error("رابط YouTube غير صحيح.");
-        }
+          /*
+           * Roll back the newly-created lesson documents if the protected
+           * video could not be saved. This prevents a half-created lesson
+           * when a Super Admin enters a video URL but the protected backend
+           * rejects or fails the video request.
+           */
+          try {
+            await deleteDoc(doc(db, "lessons", newLessonId));
+            await deleteDoc(ref);
+          } catch (rollbackError) {
+            console.error(
+              "❌ Lesson rollback error after protected video failure:",
+              rollbackError
+            );
+          }
 
-        await setDoc(
-          doc(db, "lessonVideos", newLessonId),
-          {
-            lessonId: newLessonId,
-            videoUrl: `https://www.youtube.com/embed/${videoId}`,
-            videoType: "youtube",
-            gradeId,
-            subjectId,
-            unitId,
-            createdAt: serverTimestamp(),
-            updatedAt: serverTimestamp(),
-          },
-          { merge: true }
-        );
+          throw new Error(
+            videoError?.message ||
+              "تعذر حفظ رابط الفيديو عبر نظام الحماية. لم يتم إنشاء الدرس."
+          );
+        }
       }
 
       setSuccess(true);
@@ -816,28 +880,89 @@ export default function AddLesson() {
               style={textareaStyle}
             />
 
-            <label style={labelStyle}>
-              رابط الفيديو
-
-              <span
+            {role === "super-admin" ? (
+              <div
                 style={{
-                  opacity: 0.5,
-                  marginRight: "8px",
-                  fontWeight: "400",
+                  marginTop: "6px",
                 }}
               >
-                اختياري
-              </span>
-            </label>
+                {!showVideoInput ? (
+                  <button
+                    type="button"
+                    onClick={() => setShowVideoInput(true)}
+                    disabled={loading}
+                    style={{
+                      ...primaryButtonStyle,
+                      display: "inline-flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      gap: "8px",
+                      padding: "12px 22px",
+                      opacity: loading ? 0.65 : 1,
+                      cursor: loading ? "not-allowed" : "pointer",
+                    }}
+                  >
+                    🎥 إضافة فيديو
+                  </button>
+                ) : (
+                  <div
+                    style={{
+                      padding: "16px",
+                      marginTop: "8px",
+                      background: "rgba(255,215,0,0.05)",
+                      border: "1px solid rgba(255,215,0,0.18)",
+                      borderRadius: "12px",
+                    }}
+                  >
+                    <label style={labelStyle}>
+                      رابط YouTube
+                    </label>
 
-            <input
-              value={videoUrl}
-              onChange={(e) =>
-                setVideoUrl(e.target.value)
-              }
-              placeholder="https://www.youtube.com/..."
-              style={inputStyle}
-            />
+                    <input
+                      type="url"
+                      value={videoUrl}
+                      onChange={(e) =>
+                        setVideoUrl(e.target.value)
+                      }
+                      placeholder="https://www.youtube.com/watch?v=XXXXXXXXXXX"
+                      style={inputStyle}
+                      dir="ltr"
+                      disabled={loading}
+                      autoFocus
+                    />
+
+                    <div
+                      style={{
+                        marginTop: "-8px",
+                        marginBottom: "12px",
+                        color: "#9ca3af",
+                        fontSize: "12px",
+                        lineHeight: 1.7,
+                      }}
+                    >
+                      🔐 سيتم حفظ الرابط عبر نظام حماية الفيديو المركزي.
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setVideoUrl("");
+                        setShowVideoInput(false);
+                      }}
+                      disabled={loading}
+                      style={{
+                        ...secondaryButtonStyle,
+                        padding: "9px 16px",
+                        opacity: loading ? 0.65 : 1,
+                        cursor: loading ? "not-allowed" : "pointer",
+                      }}
+                    >
+                      إلغاء
+                    </button>
+                  </div>
+                )}
+              </div>
+            ) : null}
 
           </div>
 

@@ -12,6 +12,7 @@ import BiologyLab from "../labs/biology/BiologyLab";
 export default function LiveClassroom({
   token,
   url,
+  readOnly = false,
 }) {
 
   const [teacherTrack, setTeacherTrack] = useState(null);
@@ -87,7 +88,9 @@ export default function LiveClassroom({
 
       <div className="whiteboard-layer">
 
-        <Whiteboard />
+        <Whiteboard
+          readOnly={readOnly}
+        />
 
       </div>
 

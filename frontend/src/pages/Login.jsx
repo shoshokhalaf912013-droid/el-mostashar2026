@@ -1,5 +1,8 @@
 import React, { useState } from "react";
-import { signInWithEmailAndPassword } from "firebase/auth";
+import {
+  signInWithEmailAndPassword,
+  sendPasswordResetEmail,
+} from "firebase/auth";
 import { auth } from "../firebase";
 import { useNavigate } from "react-router-dom";
 
@@ -13,16 +16,19 @@ export default function Login() {
   });
 
   const [error, setError] = useState("");
+  const [resetMessage, setResetMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [resetLoading, setResetLoading] = useState(false);
 
   /* ================= LOGIN ================= */
 
   const handleLogin = async (e) => {
-    e.preventDefault(); // ✅ يمنع إعادة تحميل الصفحة
+    e.preventDefault(); // يمنع إعادة تحميل الصفحة
 
-    if (loading) return; // ✅ يمنع الضغط مرتين
+    if (loading) return; // يمنع الضغط مرتين
 
     setError("");
+    setResetMessage("");
     setLoading(true);
 
     try {
@@ -34,7 +40,7 @@ export default function Login() {
 
       console.log("✅ LOGIN SUCCESS:", cred.user.uid);
 
-      // ⭐ ننتظر لحظة صغيرة حتى يلتقط App.jsx حالة المستخدم
+      // ننتظر لحظة صغيرة حتى يلتقط App.jsx حالة المستخدم
       setTimeout(() => {
         navigate("/");
       }, 400);
@@ -47,10 +53,57 @@ export default function Login() {
     setLoading(false);
   };
 
+  /* ================= PASSWORD RESET ================= */
+
+  const handlePasswordReset = async () => {
+
+    if (resetLoading) return;
+
+    const email = form.email.trim();
+
+    setError("");
+    setResetMessage("");
+
+    if (!email) {
+      setError("❌ اكتب البريد الإلكتروني أولًا");
+      return;
+    }
+
+    setResetLoading(true);
+
+    try {
+
+      await sendPasswordResetEmail(auth, email);
+
+      setResetMessage(
+        "✔ تم إرسال رابط تغيير كلمة المرور إلى بريدك الإلكتروني. راجع البريد الوارد أو مجلد الرسائل غير المرغوب فيها."
+      );
+
+    } catch (err) {
+
+      console.error("PASSWORD RESET ERROR:", err);
+
+      /*
+       * لا نعرض تفاصيل Firebase للمستخدم.
+       * نحافظ على رسالة عامة وآمنة.
+       */
+
+      setError(
+        "❌ تعذر إرسال رابط استعادة كلمة المرور. تأكد من صحة البريد الإلكتروني وحاول مرة أخرى."
+      );
+
+    } finally {
+
+      setResetLoading(false);
+
+    }
+  };
+
   /* ================= UI ================= */
 
   return (
     <div className="login-page" dir="rtl">
+
       <form onSubmit={handleLogin} className="login-box">
 
         <h2>تسجيل الدخول</h2>
@@ -60,7 +113,10 @@ export default function Login() {
           placeholder="البريد الإلكتروني"
           value={form.email}
           onChange={(e) =>
-            setForm({ ...form, email: e.target.value })
+            setForm({
+              ...form,
+              email: e.target.value,
+            })
           }
           required
         />
@@ -70,7 +126,10 @@ export default function Login() {
           placeholder="كلمة المرور"
           value={form.password}
           onChange={(e) =>
-            setForm({ ...form, password: e.target.value })
+            setForm({
+              ...form,
+              password: e.target.value,
+            })
           }
           required
         />
@@ -79,9 +138,33 @@ export default function Login() {
           {loading ? "جاري الدخول..." : "دخول"}
         </button>
 
-        {error && <p className="error">{error}</p>}
+        {/* ================= FORGOT PASSWORD ================= */}
+
+        <button
+          type="button"
+          onClick={handlePasswordReset}
+          disabled={resetLoading}
+          className="forgot-password-button"
+        >
+          {resetLoading
+            ? "جاري إرسال رابط الاستعادة..."
+            : "نسيت كلمة المرور؟"}
+        </button>
+
+        {error && (
+          <p className="error">
+            {error}
+          </p>
+        )}
+
+        {resetMessage && (
+          <p className="success">
+            {resetMessage}
+          </p>
+        )}
 
       </form>
+
     </div>
   );
 }

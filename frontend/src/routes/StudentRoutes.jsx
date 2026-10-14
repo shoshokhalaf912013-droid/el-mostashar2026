@@ -344,9 +344,27 @@ function RequireSubscription({
         null;
 
 
+      /*
+       * =================================================
+       * الصف الأول: الثانوية العامة والبكالوريا
+       *
+       * sec1 و bac1 يستخدمان نفس منهج الصف الأول.
+       * لذلك التسجيل في أحدهما يكفي للوصول إلى الآخر.
+       *
+       * لا نغيّر gradeId في Firebase ولا ننشئ
+       * تسجيلًا ثانيًا؛ نسمح فقط بالمطابقة بينهما
+       * داخل فحص الصلاحية.
+       * =================================================
+       */
+      const gradesAreEquivalent =
+        (data.gradeId === "sec1" && requestedGrade === "bac1") ||
+        (data.gradeId === "bac1" && requestedGrade === "sec1");
+
+
       if (
         requestedGrade &&
-        data.gradeId !== requestedGrade
+        data.gradeId !== requestedGrade &&
+        !gradesAreEquivalent
       ) {
 
         setErrorType(
@@ -571,7 +589,7 @@ function RequireSubscription({
 
     const whatsappMessage =
       encodeURIComponent(
-        `مرحبًا، أريد تفعيل اشتراكي في منصة المستشار 2026.
+        `مرحبًا، أريد تفعيل اشتراكي في منصة المستشار 2027.
 
 الاسم: ${studentName}
 
@@ -850,7 +868,7 @@ function RequireSubscription({
 
     const whatsappUrl =
       `https://wa.me/201012002317?text=${encodeURIComponent(
-        "مرحبًا، أريد الاشتراك في مادة أخرى على منصة المستشار 2026."
+        "مرحبًا، أريد الاشتراك في مادة أخرى على منصة المستشار 2027."
       )}`;
 
 
@@ -1529,16 +1547,6 @@ export default function StudentRoutes() {
             path="bac/grades"
             element={
               <BacGradesView />
-            }
-          />
-
-
-          <Route
-            path="bac/subjects/bac1"
-            element={
-              <RequireSubscription>
-                <BacSubjectsRouter />
-              </RequireSubscription>
             }
           />
 

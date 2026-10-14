@@ -109,6 +109,28 @@ export default function UnitsViewSuperAdmin() {
     }
   }
 
+  /* ================= OPEN ADD LESSON ================= */
+  function openAddLesson(unit) {
+    /*
+      IMPORTANT:
+      This path must match the route defined in
+      SuperAdminRoutes.jsx:
+
+      /super-admin/add-lesson/:systemId/:gradeId/:subjectId/:unitId
+    */
+    navigate(
+      `/super-admin/add-lesson/${encodeURIComponent(
+        systemId
+      )}/${encodeURIComponent(
+        gradeId
+      )}/${encodeURIComponent(
+        subjectId
+      )}/${encodeURIComponent(
+        unit.unitId || unit.id
+      )}`
+    );
+  }
+
   /* ================= LOADING ================= */
   if (loading) {
     return (
@@ -181,15 +203,11 @@ export default function UnitsViewSuperAdmin() {
               key={unit.id}
               className="flex items-center justify-between gap-6"
             >
-              {/* ✅ التعديل الحقيقي هنا */}
+              {/* ===== OPEN ADD LESSON ===== */}
               <UnitCard
                 unit={unit}
                 isAdmin={true}
-                onClick={() =>
-                  navigate(
-                    `/super-admin/lessons/${systemId}/${gradeId}/${subjectId}/${unit.unitId}/add`
-                  )
-                }
+                onClick={() => openAddLesson(unit)}
               />
 
               <button

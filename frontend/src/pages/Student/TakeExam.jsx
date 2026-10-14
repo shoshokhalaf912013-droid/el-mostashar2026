@@ -70,46 +70,6 @@ export default function TakeExam() {
         const res = await api.get(`/api/attempts/${id}`);
         const att = res.data.attempt;
 
-        /*
-        ========================================================
-        منع إعادة دخول محاولة انتهت بالفعل
-
-        الـBackend هو المصدر الحقيقي للحالة.
-        إذا كانت المحاولة submitted / failed / abandoned
-        فلا نعيد فتح شاشة الامتحان عند Refresh.
-        نرسل الطالب مباشرة إلى صفحة النتيجة.
-        ========================================================
-        */
-        if (att?.status && att.status !== "in_progress") {
-          const examRes = await api.get(
-            `/api/exams/${att.examId}`
-          );
-
-          const loadedExam = examRes.data.exam;
-
-          const totalMarks = (loadedExam?.questions || []).reduce(
-            (sum, question) =>
-              sum + (Number(question?.marks) || 1),
-            0
-          );
-
-          navigate(
-            `/student/exam-result/${id}`,
-            {
-              replace: true,
-              state: {
-                score: Number(att.score) || 0,
-                total: totalMarks || loadedExam?.questions?.length || 0,
-                pendingEssayCount: 0,
-                attemptStatus: att.status,
-                alreadySubmitted: true,
-              },
-            }
-          );
-
-          return;
-        }
-
         setAttempt(att);
 
         const examRes = await api.get(
@@ -1060,11 +1020,25 @@ export default function TakeExam() {
     );
 
   /*
+  ========================================================
   Full image URL
+  صورة حل الطالب
+  ========================================================
   */
   const currentImageUrl =
     getImageUrl(
       currentAnswer.imageUrl
+    );
+
+  /*
+  ========================================================
+  Full image URL
+  صورة السؤال / الخريطة
+  ========================================================
+  */
+  const questionImageUrl =
+    getImageUrl(
+      q.imageUrl
     );
 
   /*
@@ -1140,6 +1114,28 @@ export default function TakeExam() {
         <p className="mb-6 text-lg leading-8">
           {q.questionText}
         </p>
+
+        {/* =================================================
+            QUESTION IMAGE / MAP
+
+            الصورة التي رفعها المعلم أو Admin أو
+            Super Admin أثناء إنشاء السؤال.
+        ================================================== */}
+        {questionImageUrl && (
+          <div className="mb-6 bg-gray-800 rounded p-4">
+            <div className="text-yellow-400 font-bold mb-3">
+              صورة / خريطة السؤال
+            </div>
+
+            <div className="bg-gray-950 rounded p-3">
+              <img
+                src={questionImageUrl}
+                alt="صورة أو خريطة السؤال"
+                className="max-w-full max-h-[600px] mx-auto rounded object-contain"
+              />
+            </div>
+          </div>
+        )}
 
         {/* ================= MCQ ================= */}
         {q.type === "mcq" && (

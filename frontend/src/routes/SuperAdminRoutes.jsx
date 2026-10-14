@@ -4,7 +4,7 @@ import {
 } from "react-router-dom";
 
 import SuperAdminLayout
-  from "../pages/superadmin/SuperAdminLayout";
+  from "../layouts/SuperAdminLayout";
 
 import SuperAdminHome
   from "../pages/superadmin/SuperAdminHome";
@@ -51,6 +51,9 @@ import TestPermissions
 import VideoSecrets
   from "../pages/superadmin/VideoSecrets";
 
+import LessonsManagement
+  from "../pages/superadmin/LessonsManagement";
+
 import RequireRole
   from "../components/shared/RequireRole";
 
@@ -71,6 +74,16 @@ EXAM ENGINE
 
 import ExamBuilder
   from "../pages/teacher/ExamBuilder";
+
+/*
+========================================================
+EXAM FILE IMPORT
+========================================================
+*/
+
+import ExamImport
+  from "../pages/superadmin/ExamImport";
+
 
 export default function SuperAdminRoutes() {
 
@@ -112,6 +125,7 @@ export default function SuperAdminRoutes() {
           }
         />
 
+
         {/* =========================
             TEACHERS
         ========================= */}
@@ -137,6 +151,7 @@ export default function SuperAdminRoutes() {
           }
         />
 
+
         {/* =========================
             USERS
         ========================= */}
@@ -154,6 +169,7 @@ export default function SuperAdminRoutes() {
             <StudentsManagement />
           }
         />
+
 
         {/* =========================
             EXAMS
@@ -173,6 +189,19 @@ export default function SuperAdminRoutes() {
           }
         />
 
+
+        {/* =========================
+            IMPORT EXAM FROM FILES
+        ========================= */}
+
+        <Route
+          path="import-exam"
+          element={
+            <ExamImport />
+          }
+        />
+
+
         {/* =========================
             QUESTION BANK
         ========================= */}
@@ -183,6 +212,7 @@ export default function SuperAdminRoutes() {
             <QuestionBank />
           }
         />
+
 
         {/* =========================
             STATISTICS
@@ -195,6 +225,7 @@ export default function SuperAdminRoutes() {
           }
         />
 
+
         {/* =========================
             UNITS
         ========================= */}
@@ -205,6 +236,20 @@ export default function SuperAdminRoutes() {
             <UnitsViewSuperAdmin />
           }
         />
+
+
+        {/* =========================
+            LESSONS MANAGEMENT
+            SUPER ADMIN
+        ========================= */}
+
+        <Route
+          path="lessons-management"
+          element={
+            <LessonsManagement />
+          }
+        />
+
 
         {/* =========================
             ADD LESSON
@@ -225,6 +270,7 @@ export default function SuperAdminRoutes() {
           }
         />
 
+
         {/* =================================================
             VIDEO SECRETS
             SUPER ADMIN ONLY
@@ -237,6 +283,7 @@ export default function SuperAdminRoutes() {
           }
         />
 
+
         {/* =========================
             TEST PERMISSIONS
         ========================= */}
@@ -247,6 +294,7 @@ export default function SuperAdminRoutes() {
             <TestPermissions />
           }
         />
+
 
         {/* =========================
             SECURE
@@ -265,6 +313,7 @@ export default function SuperAdminRoutes() {
             <CriticalPermissions />
           }
         />
+
 
         {/* =========================
             NOT FOUND

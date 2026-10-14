@@ -7,766 +7,766 @@ import {
 import api from "../../utils/api";
 
 export default function VideoSecrets() {
+  const [lessons, setLessons] = useState([]);
+  const [videos, setVideos] = useState([]);
 
-  const [lessons, setLessons] =
-    useState([]);
+  const [search, setSearch] = useState("");
 
-  const [videos, setVideos] =
-    useState([]);
+  const [loading, setLoading] = useState(true);
+  const [savingId, setSavingId] = useState(null);
 
-  const [search, setSearch] =
-    useState("");
+  const [editingId, setEditingId] = useState(null);
+  const [editUrl, setEditUrl] = useState("");
 
-  const [loading, setLoading] =
-    useState(true);
+  /* =====================================================
+     LOAD LESSONS + PROTECTED VIDEOS
+  ===================================================== */
 
-  const [savingId, setSavingId] =
-    useState(null);
+  async function loadData() {
+    try {
+      setLoading(true);
 
-  const [editingId, setEditingId] =
-    useState(null);
+      const [
+        lessonsResponse,
+        videosResponse,
+      ] = await Promise.all([
+        api.get("/api/video-secrets/lessons"),
+        api.get("/api/video-secrets"),
+      ]);
 
-  const [editUrl, setEditUrl] =
-    useState("");
+      setLessons(
+        Array.isArray(
+          lessonsResponse.data?.lessons
+        )
+          ? lessonsResponse.data.lessons
+          : []
+      );
 
-  const loadData =
-    async () => {
+      setVideos(
+        Array.isArray(
+          videosResponse.data?.videos
+        )
+          ? videosResponse.data.videos
+          : []
+      );
+    } catch (error) {
+      console.error(
+        "Video secrets loading error:",
+        error
+      );
 
-      try {
-
-        setLoading(true);
-
-        const [
-          lessonsResponse,
-          videosResponse,
-        ] = await Promise.all([
-
-          api.get(
-            "/api/video-secrets/lessons"
-          ),
-
-          api.get(
-            "/api/video-secrets"
-          ),
-
-        ]);
-
-        setLessons(
-          Array.isArray(
-            lessonsResponse.data?.lessons
-          )
-            ? lessonsResponse.data.lessons
-            : []
-        );
-
-        setVideos(
-          Array.isArray(
-            videosResponse.data?.videos
-          )
-            ? videosResponse.data.videos
-            : []
-        );
-
-      } catch (error) {
-
-        console.error(
-          "Video secrets loading error:",
-          error
-        );
-
-        alert(
-          error?.response?.data?.error ||
+      alert(
+        error?.response?.data?.error ||
           "فشل تحميل بيانات الفيديوهات"
-        );
-
-      } finally {
-
-        setLoading(false);
-      }
-    };
+      );
+    } finally {
+      setLoading(false);
+    }
+  }
 
   useEffect(() => {
-
     loadData();
-
   }, []);
 
-  const videosMap =
-    useMemo(() => {
+  /* =====================================================
+     MAP VIDEOS BY LESSON
+  ===================================================== */
 
-      const map =
-        new Map();
+  const videosMap = useMemo(() => {
+    const map = new Map();
 
-      for (
-        const video of videos
-      ) {
-        map.set(
-          video.lessonId,
-          video
-        );
-      }
+    for (const video of videos) {
+      map.set(video.lessonId, video);
+    }
 
-      return map;
+    return map;
+  }, [videos]);
 
-    }, [
-      videos,
-    ]);
+  /* =====================================================
+     SEARCH
+  ===================================================== */
 
-  const filteredLessons =
-    lessons.filter(
-      (lesson) => {
+  const filteredLessons = useMemo(() => {
+    const term = search.trim().toLowerCase();
 
-        const term =
-          search
-            .trim()
-            .toLowerCase();
+    if (!term) {
+      return lessons;
+    }
 
-        if (!term) {
-          return true;
-        }
+    return lessons.filter((lesson) => {
+      return (
+        String(lesson.title || "")
+          .toLowerCase()
+          .includes(term) ||
 
-        return (
+        String(lesson.publicLessonId || "")
+          .toLowerCase()
+          .includes(term) ||
 
-          String(
-            lesson.title || ""
-          )
-            .toLowerCase()
-            .includes(term) ||
+        String(lesson.subjectId || "")
+          .toLowerCase()
+          .includes(term) ||
 
-          String(
-            lesson.publicLessonId || ""
-          )
-            .toLowerCase()
-            .includes(term) ||
+        String(lesson.gradeId || "")
+          .toLowerCase()
+          .includes(term) ||
 
-          String(
-            lesson.subjectId || ""
-          )
-            .toLowerCase()
-            .includes(term) ||
+        String(lesson.unitId || "")
+          .toLowerCase()
+          .includes(term)
+      );
+    });
+  }, [lessons, search]);
 
-          String(
-            lesson.gradeId || ""
-          )
-            .toLowerCase()
-            .includes(term)
-        );
-      }
-    );
+  /* =====================================================
+     START EDIT VIDEO
+  ===================================================== */
 
-  const startEdit =
-    (lessonId) => {
+  function startEdit(lessonId) {
+    const video = videosMap.get(lessonId);
 
-      const video =
-        videosMap.get(
+    setEditingId(lessonId);
+    setEditUrl(video?.youtubeUrl || "");
+  }
+
+  /* =====================================================
+     CANCEL EDIT
+  ===================================================== */
+
+  function cancelEdit() {
+    setEditingId(null);
+    setEditUrl("");
+  }
+
+  /* =====================================================
+     SAVE / REPLACE PROTECTED VIDEO
+  ===================================================== */
+
+  async function saveVideo(lessonId) {
+    const youtubeUrl = editUrl.trim();
+
+    if (!youtubeUrl) {
+      alert("أدخل رابط YouTube أولًا.");
+      return;
+    }
+
+    try {
+      setSavingId(lessonId);
+
+      const response = await api.post(
+        `/api/video-secrets/${encodeURIComponent(
           lessonId
+        )}`,
+        {
+          youtubeUrl,
+        }
+      );
+
+      if (!response.data?.success) {
+        throw new Error(
+          response.data?.error ||
+            "فشل حفظ الفيديو."
         );
+      }
 
-      setEditingId(
-        lessonId
+      alert(
+        "✅ تم حفظ الفيديو وحمايته بنجاح."
       );
-
-      setEditUrl(
-        video?.youtubeUrl || ""
-      );
-    };
-
-  const cancelEdit =
-    () => {
 
       setEditingId(null);
       setEditUrl("");
-    };
 
-  const saveVideo =
-    async (lessonId) => {
+      await loadData();
+    } catch (error) {
+      console.error(
+        "Save video secret error:",
+        error
+      );
 
-      try {
-
-        if (!editUrl.trim()) {
-
-          alert(
-            "أدخل رابط YouTube"
-          );
-
-          return;
-        }
-
-        setSavingId(
-          lessonId
-        );
-
-        await api.post(
-          `/api/video-secrets/${lessonId}`,
-          {
-            youtubeUrl:
-              editUrl.trim(),
-          }
-        );
-
-        alert(
-          "تم حفظ الفيديو بنجاح"
-        );
-
-        setEditingId(null);
-        setEditUrl("");
-
-        await loadData();
-
-      } catch (error) {
-
-        console.error(
-          "Save video secret error:",
-          error
-        );
-
-        alert(
-          error?.response?.data?.error ||
+      alert(
+        error?.response?.data?.error ||
+          error?.message ||
           "فشل حفظ الفيديو"
-        );
+      );
+    } finally {
+      setSavingId(null);
+    }
+  }
 
-      } finally {
+  /* =====================================================
+     DELETE VIDEO
+  ===================================================== */
 
-        setSavingId(null);
-      }
-    };
+  async function deleteVideo(lessonId) {
+    const confirmed = window.confirm(
+      "هل تريد حذف فيديو هذا الدرس من المنصة؟"
+    );
 
-  const deleteVideo =
-    async (lessonId) => {
+    if (!confirmed) {
+      return;
+    }
 
-      const confirmed =
-        window.confirm(
-          "هل تريد حذف فيديو هذا الدرس من المنصة؟"
-        );
+    try {
+      setSavingId(lessonId);
 
-      if (!confirmed) {
-        return;
-      }
-
-      try {
-
-        setSavingId(
+      await api.delete(
+        `/api/video-secrets/${encodeURIComponent(
           lessonId
-        );
+        )}`
+      );
 
-        await api.delete(
-          `/api/video-secrets/${lessonId}`
-        );
+      alert("تم حذف فيديو الدرس.");
 
-        alert(
-          "تم حذف الفيديو"
-        );
+      await loadData();
+    } catch (error) {
+      console.error(
+        "Delete video secret error:",
+        error
+      );
 
-        await loadData();
-
-      } catch (error) {
-
-        console.error(
-          "Delete video secret error:",
-          error
-        );
-
-        alert(
-          error?.response?.data?.error ||
+      alert(
+        error?.response?.data?.error ||
           "فشل حذف الفيديو"
-        );
+      );
+    } finally {
+      setSavingId(null);
+    }
+  }
 
-      } finally {
-
-        setSavingId(null);
-      }
-    };
+  /* =====================================================
+     UI
+  ===================================================== */
 
   return (
     <div
       dir="rtl"
-      style={{
-        minHeight:
-          "100vh",
-
-        padding:
-          "30px",
-
-        background:
-          "#050505",
-
-        color:
-          "#fff",
-      }}
+      className="
+        min-h-screen
+        bg-black
+        text-white
+        p-6
+      "
     >
+      <div className="max-w-7xl mx-auto">
 
-      <div
-        style={{
-          maxWidth:
-            "1200px",
-
-          margin:
-            "0 auto",
-        }}
-      >
+        {/* =================================================
+            HEADER
+        ================================================= */}
 
         <div
-          style={{
-            marginBottom:
-              "24px",
-          }}
+          className="
+            mb-8
+            p-6
+            rounded-2xl
+            border
+            border-yellow-500/30
+            bg-[#0b0b0b]
+          "
+        >
+          <div className="flex items-center gap-4">
+
+            <div
+              className="
+                w-14
+                h-14
+                rounded-2xl
+                flex
+                items-center
+                justify-center
+                bg-yellow-400/10
+                border
+                border-yellow-400/30
+                text-3xl
+              "
+            >
+              🎬
+            </div>
+
+            <div>
+
+              <h1
+                className="
+                  text-2xl
+                  md:text-3xl
+                  font-black
+                  text-yellow-400
+                "
+              >
+                إضافة وحماية فيديو YouTube
+              </h1>
+
+              <p
+                className="
+                  mt-2
+                  text-sm
+                  text-gray-400
+                "
+              >
+                أضف رابط YouTube للدرس وسيتم
+                تمريره إلى نظام حماية الفيديو
+                الموجود بالمنصة.
+              </p>
+
+            </div>
+
+          </div>
+        </div>
+
+        {/* =================================================
+            SEARCH
+        ================================================= */}
+
+        <div
+          className="
+            mb-6
+            p-5
+            rounded-2xl
+            border
+            border-yellow-500/20
+            bg-[#0b0b0b]
+          "
         >
 
-          <h1
-            style={{
-              color:
-                "#ffd700",
-
-              marginBottom:
-                "8px",
-            }}
+          <label
+            className="
+              block
+              mb-2
+              text-yellow-400
+              font-bold
+            "
           >
-            🔐 أسرار فيديوهات المنصة
-          </h1>
+            🔎 البحث عن الدرس
+          </label>
 
-          <p
-            style={{
-              color:
-                "#aaa",
-
-              lineHeight:
-                1.8,
-            }}
-          >
-            هذه الصفحة داخلية للـSuper Admin فقط.
-            روابط YouTube الحقيقية لا تظهر في صفحات الدروس
-            أو لوحة المعلم أو لوحة الـAdmin.
-          </p>
+          <input
+            value={search}
+            onChange={(e) =>
+              setSearch(e.target.value)
+            }
+            placeholder="
+              ابحث باسم الدرس أو الصف أو المادة أو الوحدة...
+            "
+            className="
+              w-full
+              px-4
+              py-3
+              rounded-xl
+              bg-black
+              border
+              border-yellow-500/30
+              text-white
+              placeholder-gray-600
+              outline-none
+              focus:border-yellow-400
+            "
+          />
 
         </div>
 
-        <input
-          value={search}
-          onChange={(e) =>
-            setSearch(
-              e.target.value
-            )
-          }
-          placeholder="ابحث باسم الدرس أو الصف أو المادة..."
-          style={{
-            width:
-              "100%",
-
-            boxSizing:
-              "border-box",
-
-            padding:
-              "14px 16px",
-
-            borderRadius:
-              "10px",
-
-            border:
-              "1px solid #554400",
-
-            background:
-              "#111",
-
-            color:
-              "#fff",
-
-            marginBottom:
-              "20px",
-          }}
-        />
+        {/* =================================================
+            LOADING
+        ================================================= */}
 
         {loading ? (
 
           <div
-            style={{
-              padding:
-                "40px",
-
-              textAlign:
-                "center",
-
-              color:
-                "#ffd700",
-            }}
+            className="
+              p-12
+              rounded-2xl
+              border
+              border-yellow-500/20
+              bg-[#0b0b0b]
+              text-center
+              text-yellow-400
+              font-bold
+            "
           >
-            جاري تحميل بيانات الفيديوهات...
+            جاري تحميل الدروس والفيديوهات...
+          </div>
+
+        ) : filteredLessons.length === 0 ? (
+
+          <div
+            className="
+              p-12
+              rounded-2xl
+              border
+              border-yellow-500/20
+              bg-[#0b0b0b]
+              text-center
+              text-gray-400
+            "
+          >
+            لا توجد دروس مطابقة للبحث.
           </div>
 
         ) : (
 
-          <div
-            style={{
-              display:
-                "grid",
+          <div className="space-y-5">
 
-              gap:
-                "14px",
-            }}
-          >
+            {filteredLessons.map((lesson) => {
 
-            {filteredLessons.map(
-              (lesson) => {
+              const video =
+                videosMap.get(lesson.id);
 
-                const video =
-                  videosMap.get(
-                    lesson.id
-                  );
+              const isEditing =
+                editingId === lesson.id;
 
-                const isEditing =
-                  editingId ===
-                  lesson.id;
+              const isSaving =
+                savingId === lesson.id;
 
-                const isSaving =
-                  savingId ===
-                  lesson.id;
+              return (
+                <div
+                  key={lesson.id}
+                  className="
+                    rounded-2xl
+                    border
+                    border-yellow-500/25
+                    bg-[#0b0b0b]
+                    p-5
+                  "
+                >
 
-                return (
+                  {/* =================================================
+                      LESSON HEADER
+                  ================================================= */}
 
                   <div
-                    key={
-                      lesson.id
-                    }
-                    style={{
-                      border:
-                        "1px solid #4a3a00",
-
-                      borderRadius:
-                        "14px",
-
-                      padding:
-                        "18px",
-
-                      background:
-                        "#0d0d0d",
-                    }}
+                    className="
+                      flex
+                      items-start
+                      justify-between
+                      gap-6
+                      flex-wrap
+                    "
                   >
 
-                    <div
-                      style={{
-                        display:
-                          "flex",
+                    <div className="min-w-0">
 
-                        justifyContent:
-                          "space-between",
-
-                        gap:
-                          "20px",
-
-                        flexWrap:
-                          "wrap",
-                      }}
-                    >
-
-                      <div>
-
-                        <h3
-                          style={{
-                            margin:
-                              "0 0 8px",
-
-                            color:
-                              "#ffd700",
-                          }}
-                        >
-                          {
-                            lesson.title
-                          }
-                        </h3>
-
-                        <div
-                          style={{
-                            color:
-                              "#aaa",
-
-                            fontSize:
-                              "13px",
-
-                            lineHeight:
-                              1.9,
-                          }}
-                        >
-
-                          الصف:{" "}
-                          {
-                            lesson.gradeId ||
-                            "-"
-                          }
-
-                          <br />
-
-                          المادة:{" "}
-                          {
-                            lesson.subjectId ||
-                            "-"
-                          }
-
-                          <br />
-
-                          الوحدة:{" "}
-                          {
-                            lesson.unitId ||
-                            "-"
-                          }
-
-                          <br />
-
-                          Public Lesson ID:{" "}
-                          {
-                            lesson.publicLessonId ||
-                            "-"
-                          }
-
-                        </div>
-
-                      </div>
+                      <h2
+                        className="
+                          text-xl
+                          font-black
+                          text-yellow-400
+                          mb-3
+                        "
+                      >
+                        {lesson.title ||
+                          "بدون عنوان"}
+                      </h2>
 
                       <div
-                        style={{
-                          minWidth:
-                            "260px",
-
-                          color:
-                            video
-                              ? "#4ade80"
-                              : "#f87171",
-                        }}
+                        className="
+                          grid
+                          grid-cols-1
+                          md:grid-cols-2
+                          gap-x-8
+                          gap-y-2
+                          text-sm
+                          text-gray-400
+                        "
                       >
 
-                        {
-                          video
-                            ? "✅ يوجد فيديو"
-                            : "❌ لا يوجد فيديو"
-                        }
+                        <div>
+                          الصف:
+                          <span className="text-white mr-2">
+                            {lesson.gradeId || "-"}
+                          </span>
+                        </div>
+
+                        <div>
+                          المادة:
+                          <span className="text-white mr-2">
+                            {lesson.subjectId || "-"}
+                          </span>
+                        </div>
+
+                        <div>
+                          الوحدة:
+                          <span className="text-white mr-2">
+                            {lesson.unitId || "-"}
+                          </span>
+                        </div>
+
+                        <div>
+                          Public Lesson ID:
+                          <span className="text-white mr-2">
+                            {lesson.publicLessonId ||
+                              "-"}
+                          </span>
+                        </div>
 
                       </div>
 
                     </div>
 
-                    {isEditing ? (
+                    {/* =================================================
+                        VIDEO STATUS
+                    ================================================= */}
 
-                      <div
-                        style={{
-                          marginTop:
-                            "18px",
-                        }}
-                      >
+                    <div
+                      className={`
+                        px-4
+                        py-3
+                        rounded-xl
+                        border
+                        font-bold
+                        text-sm
+                        shrink-0
 
-                        <input
-                          value={
-                            editUrl
-                          }
-                          onChange={(e) =>
-                            setEditUrl(
-                              e.target.value
-                            )
-                          }
-                          placeholder="https://www.youtube.com/watch?v=..."
-                          dir="ltr"
-                          style={{
-                            width:
-                              "100%",
-
-                            boxSizing:
-                              "border-box",
-
-                            padding:
-                              "13px",
-
-                            borderRadius:
-                              "8px",
-
-                            border:
-                              "1px solid #6b5500",
-
-                            background:
-                              "#111",
-
-                            color:
-                              "#fff",
-                          }}
-                        />
-
-                        <div
-                          style={{
-                            display:
-                              "flex",
-
-                            gap:
-                              "10px",
-
-                            marginTop:
-                              "12px",
-
-                            flexWrap:
-                              "wrap",
-                          }}
-                        >
-
-                          <button
-                            disabled={
-                              isSaving
-                            }
-                            onClick={() =>
-                              saveVideo(
-                                lesson.id
-                              )
-                            }
-                            style={{
-                              padding:
-                                "10px 18px",
-
-                              border:
-                                "none",
-
-                              borderRadius:
-                                "8px",
-
-                              background:
-                                "#ffd000",
-
-                              color:
-                                "#000",
-
-                              fontWeight:
-                                "700",
-
-                              cursor:
-                                "pointer",
-                            }}
-                          >
-                            {
-                              isSaving
-                                ? "جاري الحفظ..."
-                                : "حفظ"
-                            }
-                          </button>
-
-                          <button
-                            onClick={
-                              cancelEdit
-                            }
-                            style={{
-                              padding:
-                                "10px 18px",
-
-                              border:
-                                "1px solid #555",
-
-                              borderRadius:
-                                "8px",
-
-                              background:
-                                "#181818",
-
-                              color:
-                                "#fff",
-
-                              cursor:
-                                "pointer",
-                            }}
-                          >
-                            إلغاء
-                          </button>
-
-                        </div>
-
-                      </div>
-
-                    ) : (
-
-                      <div
-                        style={{
-                          display:
-                            "flex",
-
-                          gap:
-                            "10px",
-
-                          marginTop:
-                            "18px",
-
-                          flexWrap:
-                            "wrap",
-                        }}
-                      >
-
-                        <button
-                          onClick={() =>
-                            startEdit(
-                              lesson.id
-                            )
-                          }
-                          style={{
-                            padding:
-                              "10px 18px",
-
-                            border:
-                              "none",
-
-                            borderRadius:
-                              "8px",
-
-                            background:
-                              "#ffd000",
-
-                            color:
-                              "#000",
-
-                            fontWeight:
-                              "700",
-
-                            cursor:
-                              "pointer",
-                          }}
-                        >
-                          🔐 إدارة الرابط
-                        </button>
-
-                        {video && (
-
-                          <button
-                            disabled={
-                              isSaving
-                            }
-                            onClick={() =>
-                              deleteVideo(
-                                lesson.id
-                              )
-                            }
-                            style={{
-                              padding:
-                                "10px 18px",
-
-                              border:
-                                "1px solid #7f1d1d",
-
-                              borderRadius:
-                                "8px",
-
-                              background:
-                                "#2a0d0d",
-
-                              color:
-                                "#ff7777",
-
-                              cursor:
-                                "pointer",
-                            }}
-                          >
-                            حذف الفيديو
-                          </button>
-
-                        )}
-
-                      </div>
-
-                    )}
+                        ${
+                          video
+                            ? `
+                              bg-green-500/10
+                              border-green-500/30
+                              text-green-400
+                            `
+                            : `
+                              bg-red-500/10
+                              border-red-500/30
+                              text-red-400
+                            `
+                        }
+                      `}
+                    >
+                      {video
+                        ? "🟢 الفيديو محمي"
+                        : "🔴 لا يوجد فيديو"}
+                    </div>
 
                   </div>
 
-                );
-              }
-            )}
+                  {/* =================================================
+                      CURRENT VIDEO INFO
+                  ================================================= */}
+
+                  {video && !isEditing && (
+                    <div
+                      className="
+                        mt-5
+                        p-4
+                        rounded-xl
+                        bg-black
+                        border
+                        border-green-500/20
+                      "
+                    >
+
+                      <div
+                        className="
+                          text-sm
+                          text-gray-400
+                          mb-2
+                        "
+                      >
+                        حالة الفيديو
+                      </div>
+
+                      <div
+                        className="
+                          text-green-400
+                          font-bold
+                        "
+                      >
+                        🔐 محمي بواسطة نظام
+                        حماية الفيديو
+                      </div>
+
+                    </div>
+                  )}
+
+                  {/* =================================================
+                      EDITOR
+                  ================================================= */}
+
+                  {isEditing && (
+
+                    <div
+                      className="
+                        mt-5
+                        p-5
+                        rounded-xl
+                        bg-black
+                        border
+                        border-yellow-500/30
+                      "
+                    >
+
+                      <label
+                        className="
+                          block
+                          mb-2
+                          text-yellow-400
+                          font-bold
+                        "
+                      >
+                        رابط فيديو YouTube
+                      </label>
+
+                      <input
+                        value={editUrl}
+                        onChange={(e) =>
+                          setEditUrl(
+                            e.target.value
+                          )
+                        }
+                        placeholder="https://www.youtube.com/watch?v=..."
+                        dir="ltr"
+                        className="
+                          w-full
+                          px-4
+                          py-3
+                          rounded-xl
+                          bg-[#111]
+                          border
+                          border-yellow-500/30
+                          text-white
+                          outline-none
+                          focus:border-yellow-400
+                        "
+                      />
+
+                      <div
+                        className="
+                          mt-3
+                          text-xs
+                          text-gray-500
+                        "
+                      >
+                        سيتم إرسال الرابط إلى
+                        Backend الحماية، ولا يتم
+                        حفظ رابط YouTube الخام
+                        داخل بيانات الدرس.
+                      </div>
+
+                      <div
+                        className="
+                          flex
+                          gap-3
+                          mt-5
+                          flex-wrap
+                        "
+                      >
+
+                        <button
+                          disabled={isSaving}
+                          onClick={() =>
+                            saveVideo(
+                              lesson.id
+                            )
+                          }
+                          className="
+                            px-6
+                            py-3
+                            rounded-xl
+                            bg-gradient-to-b
+                            from-yellow-200
+                            to-yellow-500
+                            text-black
+                            font-black
+                            disabled:opacity-50
+                          "
+                        >
+                          {isSaving
+                            ? "جاري الحفظ..."
+                            : "🔐 حفظ وحماية الفيديو"}
+                        </button>
+
+                        <button
+                          disabled={isSaving}
+                          onClick={
+                            cancelEdit
+                          }
+                          className="
+                            px-6
+                            py-3
+                            rounded-xl
+                            bg-zinc-800
+                            text-white
+                            font-bold
+                            disabled:opacity-50
+                          "
+                        >
+                          إلغاء
+                        </button>
+
+                      </div>
+
+                    </div>
+
+                  )}
+
+                  {/* =================================================
+                      ACTIONS
+                  ================================================= */}
+
+                  {!isEditing && (
+
+                    <div
+                      className="
+                        flex
+                        gap-3
+                        mt-5
+                        flex-wrap
+                      "
+                    >
+
+                      <button
+                        onClick={() =>
+                          startEdit(
+                            lesson.id
+                          )
+                        }
+                        className="
+                          px-6
+                          py-3
+                          rounded-xl
+                          bg-gradient-to-b
+                          from-yellow-200
+                          to-yellow-500
+                          text-black
+                          font-black
+                        "
+                      >
+                        🎬{" "}
+                        {video
+                          ? "تعديل رابط الفيديو"
+                          : "إضافة فيديو"}
+                      </button>
+
+                      {video && (
+
+                        <button
+                          disabled={isSaving}
+                          onClick={() =>
+                            deleteVideo(
+                              lesson.id
+                            )
+                          }
+                          className="
+                            px-6
+                            py-3
+                            rounded-xl
+                            bg-red-950
+                            border
+                            border-red-700
+                            text-red-300
+                            font-bold
+                            disabled:opacity-50
+                          "
+                        >
+                          🗑 حذف الفيديو
+                        </button>
+
+                      )}
+
+                    </div>
+
+                  )}
+
+                </div>
+              );
+            })}
 
           </div>
 

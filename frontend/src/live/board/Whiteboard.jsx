@@ -110,7 +110,7 @@ function getWhiteboardContext() {
 
 
 
-export default function Whiteboard() {
+export default function Whiteboard({ readOnly = false }) {
 
   const ownerIdRef =
     useRef(null)
@@ -759,7 +759,8 @@ export default function Whiteboard() {
           خارج منطقة الـZoom
       ================================================= */}
 
-      <div className="floatingToolbar">
+      {!readOnly && (
+        <div className="floatingToolbar">
 
         <Toolbar
 
@@ -816,7 +817,8 @@ export default function Whiteboard() {
 
         />
 
-      </div>
+        </div>
+      )}
 
 
       {/* =================================================
@@ -826,7 +828,8 @@ export default function Whiteboard() {
 
       <aside className="liveSidebar">
 
-        <label className="addFileBtn">
+        {!readOnly && (
+          <label className="addFileBtn">
 
           + إضافة ملف
 
@@ -839,7 +842,8 @@ export default function Whiteboard() {
             }}
           />
 
-        </label>
+          </label>
+        )}
 
 
         <div className="filesList">
@@ -865,14 +869,16 @@ export default function Whiteboard() {
               </button>
 
 
-              <button
-                className="fileDeleteBtn"
-                onClick={() =>
-                  removeFile(file.id)
-                }
-              >
-                ×
-              </button>
+              {!readOnly && (
+                <button
+                  className="fileDeleteBtn"
+                  onClick={() =>
+                    removeFile(file.id)
+                  }
+                >
+                  ×
+                </button>
+              )}
 
             </div>
 
@@ -900,7 +906,8 @@ export default function Whiteboard() {
             ZOOM TOOL
         ================================================= */}
 
-        <div className="zoomControls">
+        {!readOnly && (
+          <div className="zoomControls">
 
           <button
             onClick={() =>
@@ -952,7 +959,8 @@ export default function Whiteboard() {
             100%
           </button>
 
-        </div>
+          </div>
+        )}
 
 
         {/* =================================================
@@ -1055,9 +1063,10 @@ export default function Whiteboard() {
                 DRAWING
             ============================================= */}
 
-            <div className="drawingLayer">
+            {!readOnly && (
+              <div className="drawingLayer">
 
-              {activeFile?.type?.includes("pdf") ? (
+                {activeFile?.type?.includes("pdf") ? (
 
                 <PdfDrawingOverlay
                   tool={tool}
@@ -1079,16 +1088,17 @@ export default function Whiteboard() {
                   clearRef={clearRef}
                 />
 
-              )}
+                )}
 
-            </div>
+              </div>
+            )}
 
 
             {/* =============================================
                 BIOLOGY
             ============================================= */}
 
-            {activeScene === "respiratory" && (
+            {!readOnly && activeScene === "respiratory" && (
 
               <div className="r3fLayer">
 
@@ -1107,7 +1117,7 @@ export default function Whiteboard() {
             GRAPH
         ================================================= */}
 
-        {showGraph && (
+        {!readOnly && showGraph && (
 
           <div
             className="graphLayer"
@@ -1215,7 +1225,7 @@ export default function Whiteboard() {
           CALCULATOR
       ================================================= */}
 
-      {showCalculator && (
+      {!readOnly && showCalculator && (
 
         <div className="calculatorLayer">
 
